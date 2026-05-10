@@ -6,6 +6,9 @@ A local-only bill-prioritization web app. Enter your bills and take-home pay, an
 - **Frontend:** React + TypeScript + Vite + Redux Toolkit + MUI
 - **Storage:** local LiteDB file. No cloud, no accounts, no auth.
 
+<img width="2175" height="898" alt="mainScreenshot" src="https://github.com/user-attachments/assets/167a3bb9-54b1-4f79-8509-3ff5a501018c" />
+
+
 ## Project Layout
 
 ```text

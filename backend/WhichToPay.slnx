@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WhichToPay.Api/WhichToPay.Api.csproj" />
+    <Project Path="src/WhichToPay.Core/WhichToPay.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WhichToPay.Tests/WhichToPay.Tests.csproj" />
+  </Folder>
+</Solution>

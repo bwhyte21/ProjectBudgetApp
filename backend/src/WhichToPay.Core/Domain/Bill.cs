@@ -1,0 +1,12 @@
+namespace WhichToPay.Core.Domain;
+
+public sealed class Bill
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = "";
+    public decimal MonthlyAmountOwed { get; set; }
+    public decimal? TotalBalance { get; set; }
+    public DateOnly DueDate { get; set; }
+    public BillCategory Category { get; set; }
+    public decimal? MinimumPayment { get; set; }
+}

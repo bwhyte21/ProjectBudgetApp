@@ -60,6 +60,8 @@ export interface Bill {
   dueDate: string;
   category: BillCategory;
   minimumPayment?: number | null;
+  lastPaidPeriod?: string | null;
+  lastPaidAt?: string | null;
 }
 
 export interface BillInput {

@@ -42,12 +42,20 @@ public sealed class RankingService : IRankingService
         double maxBalance,
         double maxMonthly)
     {
-        var nextDue = NextDueDate(today, bill.DueDate);
+        var mostRecentCycle = MostRecentCycleDueDate(today, bill.DueDate);
+        var isOverdue = today >= bill.DueDate
+            && today >= mostRecentCycle
+            && (bill.LastPaidPeriod is null || bill.LastPaidPeriod < mostRecentCycle);
+
+        var nextDue = isOverdue ? mostRecentCycle : NextDueDate(today, bill.DueDate);
+
+        if (!isOverdue && bill.LastPaidPeriod.HasValue && bill.LastPaidPeriod.Value >= nextDue)
+        {
+            var next = nextDue.AddMonths(1);
+            nextDue = new DateOnly(next.Year, next.Month, Math.Min(bill.DueDate.Day, DateTime.DaysInMonth(next.Year, next.Month)));
+        }
         var daysUntilDue = (nextDue.DayNumber - today.DayNumber);
         var urgency = 1.0 - Math.Clamp(daysUntilDue / 31.0, 0.0, 1.0);
-
-        var isOverdue = today >= bill.DueDate
-            && today.Day > Math.Min(bill.DueDate.Day, DateTime.DaysInMonth(today.Year, today.Month));
 
         double balanceImpact;
         if (bill.Category is BillCategory.Loan or BillCategory.CreditCard)
@@ -83,11 +91,26 @@ public sealed class RankingService : IRankingService
             DueDate = bill.DueDate,
             Category = bill.Category,
             MinimumPayment = bill.MinimumPayment,
+            LastPaidPeriod = bill.LastPaidPeriod,
             Score = Math.Round(score, 2),
             RankReason = reason,
             IsOverdue = isOverdue,
             NextDueDate = nextDue
         };
+    }
+
+    private static DateOnly MostRecentCycleDueDate(DateOnly today, DateOnly dueDate)
+    {
+        var dueDay = dueDate.Day;
+        var thisMonthDays = DateTime.DaysInMonth(today.Year, today.Month);
+        var clampedThisMonth = Math.Min(dueDay, thisMonthDays);
+
+        if (today.Day >= clampedThisMonth)
+            return new DateOnly(today.Year, today.Month, clampedThisMonth);
+
+        var prev = today.AddMonths(-1);
+        var prevMonthDays = DateTime.DaysInMonth(prev.Year, prev.Month);
+        return new DateOnly(prev.Year, prev.Month, Math.Min(dueDay, prevMonthDays));
     }
 
     private static DateOnly NextDueDate(DateOnly today, DateOnly dueDate)

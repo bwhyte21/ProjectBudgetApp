@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -10,6 +10,7 @@ import TableCell from "@mui/material/TableCell";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -50,25 +51,51 @@ const formatCurrency = (n: number) =>
 const formatDueDate = (iso: string) =>
   format(parseISO(iso.substring(0, 10) + "T00:00:00"), "MMM d, yyyy");
 
+const formatLastPaidAt = (iso: string) =>
+  format(parseISO(iso), "MMM d, yyyy h:mm a");
+
 export function BillsListPage() {
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector((s) => s.bills);
+  const { result: calcResult, status: calcStatus } = useAppSelector(
+    (s) => s.calculation,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     dispatch(fetchBills());
+    dispatch(fetchCalculation());
   }, [dispatch]);
+
+  const nextDueById = useMemo(() => {
+    const map = new Map<string, string>();
+    calcResult?.rankedBills.forEach((r) => map.set(r.id, r.nextDueDate));
+    return map;
+  }, [calcResult]);
+
+  const tableData = useMemo(
+    () =>
+      items.map((b) => ({
+        ...b,
+        dueDate: nextDueById.get(b.id) ?? b.dueDate,
+      })),
+    [items, nextDueById],
+  );
 
   const openAdd = () => {
     setEditing(null);
     setDialogOpen(true);
   };
-  const openEdit = (b: Bill) => {
-    setEditing(b);
-    setDialogOpen(true);
-  };
+  const openEdit = useCallback(
+    (b: Bill) => {
+      const original = items.find((item) => item.id === b.id) ?? b;
+      setEditing(original);
+      setDialogOpen(true);
+    },
+    [items],
+  );
   const handleSubmit = async (input: BillInput) => {
     if (editing) {
       await dispatch(updateBill({ id: editing.id, input })).unwrap();
@@ -77,10 +104,13 @@ export function BillsListPage() {
     }
     dispatch(fetchCalculation());
   };
-  const handleDelete = async (id: string) => {
-    await dispatch(deleteBill(id)).unwrap();
-    dispatch(fetchCalculation());
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await dispatch(deleteBill(id)).unwrap();
+      dispatch(fetchCalculation());
+    },
+    [dispatch],
+  );
 
   const columns = useMemo<ColumnDef<Bill, unknown>[]>(() => {
     const ch = createColumnHelper<Bill>();
@@ -118,7 +148,20 @@ export function BillsListPage() {
       }),
       ch.accessor("dueDate", {
         header: "Due date",
-        cell: (info) => formatDueDate(info.getValue()),
+        cell: (info) => {
+          if (nextDueById.size === 0 && calcStatus === "loading") {
+            return <CircularProgress size={14} />;
+          }
+          return formatDueDate(info.getValue());
+        },
+        meta: { align: "right" },
+      }),
+      ch.accessor("lastPaidAt", {
+        header: "Last Paid",
+        cell: (info) => {
+          const v = info.getValue();
+          return v ? formatLastPaidAt(v) : "-";
+        },
         meta: { align: "right" },
       }),
       ch.display({
@@ -150,11 +193,10 @@ export function BillsListPage() {
         ),
       }),
     ] as ColumnDef<Bill, unknown>[];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nextDueById, calcStatus, openEdit, handleDelete]);
 
   const table = useReactTable({
-    data: items,
+    data: tableData,
     columns,
     state: { sorting },
     onSortingChange: setSorting,

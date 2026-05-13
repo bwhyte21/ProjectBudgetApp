@@ -9,4 +9,6 @@ public sealed class Bill
     public DateOnly DueDate { get; set; }
     public BillCategory Category { get; set; }
     public decimal? MinimumPayment { get; set; }
+    public DateOnly? LastPaidPeriod { get; set; }
+    public DateTime? LastPaidAt { get; set; }
 }

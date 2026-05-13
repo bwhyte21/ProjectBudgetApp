@@ -41,8 +41,9 @@ public class RankingServiceTests
     [Fact]
     public void Rank_SingleBill_ScoreReflectsCategoryAndUrgency()
     {
-        var bill = MakeBill("Rent", 1500m, 1, BillCategory.RentMortgage);
-        var result = _service.Rank(new[] { bill }, new DateOnly(2026, 5, 1));
+        // Bill anchored Jan 28, today Jan 1 - the bill has not started yet, so it's not overdue.
+        var bill = MakeBill("Rent", 1500m, 28, BillCategory.RentMortgage);
+        var result = _service.Rank(new[] { bill }, new DateOnly(2026, 1, 1));
 
         result.Should().HaveCount(1);
         result[0].Score.Should().BeGreaterThan(0);
@@ -120,6 +121,8 @@ public class RankingServiceTests
     {
         var overdueSub = MakeBill("LateSub", 15m, 5, BillCategory.Subscription);
         var futureRent = MakeBill("FutureRent", 1500m, 28, BillCategory.RentMortgage);
+        // Today is May 20; rent is due on the 28th and the April cycle was paid - so rent is NOT overdue.
+        futureRent.LastPaidPeriod = new DateOnly(2026, 4, 28);
 
         var result = _service.Rank(new[] { futureRent, overdueSub }, new DateOnly(2026, 5, 20));
 
@@ -130,14 +133,111 @@ public class RankingServiceTests
     }
 
     [Fact]
-    public void Rank_DueDay31InFebruary_ClampedCorrectly()
+    public void Rank_DueDay31InFebruary_ClampedAndOverdueAgainstPreviousCycle()
     {
+        // Bill anchored Jan 31, today Feb 15. clampedThisMonth = min(31, 28) = 28.
+        // today.Day=15 < 28 -> most-recent-cycle = Jan 31. today >= Jan 31, no LastPaidPeriod -> overdue.
+        // NextDueDate (the displayed missed date) should be Jan 31.
         var bill = MakeBill("EndMonth", 100m, 31, BillCategory.Utility);
         var feb15 = new DateOnly(2026, 2, 15);
 
         var result = _service.Rank(new[] { bill }, feb15);
 
         result.Should().HaveCount(1);
+        result[0].IsOverdue.Should().BeTrue();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 1, 31));
+    }
+
+    [Fact]
+    public void Rank_MarkedPaidThisCycle_NotOverdue()
+    {
+        var bill = new Bill
+        {
+            Name = "PaidThisCycle",
+            MonthlyAmountOwed = 50m,
+            DueDate = new DateOnly(2026, 4, 12),
+            Category = BillCategory.Subscription,
+            LastPaidPeriod = new DateOnly(2026, 5, 12)
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 6, 12));
+    }
+
+    [Fact]
+    public void Rank_MarkedPaidLastCycleButNewCycleMissed_Overdue()
+    {
+        var bill = new Bill
+        {
+            Name = "PaidLastCycle",
+            MonthlyAmountOwed = 50m,
+            DueDate = new DateOnly(2026, 4, 12),
+            Category = BillCategory.Subscription,
+            LastPaidPeriod = new DateOnly(2026, 4, 12)
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeTrue();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 5, 12));
+    }
+
+    [Fact]
+    public void Rank_Overdue_NextDueDateIsMissedDate_NotFutureCycle()
+    {
+        // Regression for the "Overdue with future date" screenshot bug.
+        var bill = new Bill
+        {
+            Name = "OldRepub",
+            MonthlyAmountOwed = 57.08m,
+            DueDate = new DateOnly(2026, 4, 12),
+            Category = BillCategory.Insurance
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeTrue();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 5, 12));
+    }
+
+    [Fact]
+    public void Rank_NotYetReachedDueDay_NotOverdue()
+    {
+        var bill = new Bill
+        {
+            Name = "UpcomingUtil",
+            MonthlyAmountOwed = 100m,
+            DueDate = new DateOnly(2026, 5, 20),
+            Category = BillCategory.Utility
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 5, 20));
+    }
+
+    [Fact]
+    public void Rank_LastPaidPeriodInFuture_DoesNotMakeBillOverdue()
+    {
+        var bill = new Bill
+        {
+            Name = "OddInput",
+            MonthlyAmountOwed = 50m,
+            DueDate = new DateOnly(2026, 4, 12),
+            Category = BillCategory.Subscription,
+            LastPaidPeriod = new DateOnly(2026, 6, 12)
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
         result[0].IsOverdue.Should().BeFalse();
     }
 
@@ -194,5 +294,47 @@ public class RankingServiceTests
 
         result[0].IsOverdue.Should().BeFalse();
         result[0].NextDueDate.Should().Be(new DateOnly(2026, 6, 15));
+    }
+
+    [Fact]
+    public void Rank_MarkedPaidEarly_NextDueDateAdvancesOneMonth()
+    {
+        // Today is May 13; DueDate = May 18; bill was marked paid early with paidPeriod = May 18.
+        // NextDueDate should advance to June 18, not remain at May 18.
+        var bill = new Bill
+        {
+            Name = "BlueCrd",
+            MonthlyAmountOwed = 115m,
+            DueDate = new DateOnly(2026, 5, 18),
+            Category = BillCategory.CreditCard,
+            LastPaidPeriod = new DateOnly(2026, 5, 18)
+        };
+        var today = new DateOnly(2026, 5, 13);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 6, 18));
+    }
+
+    [Fact]
+    public void Rank_MarkedPaidEarlyFutureMonth_NextDueDateAdvancesBeyondFuture()
+    {
+        // Today is May 9; DueDate = June 2; bill was marked paid early with paidPeriod = June 2.
+        // NextDueDate should advance to July 2.
+        var bill = new Bill
+        {
+            Name = "SlvrCrd",
+            MonthlyAmountOwed = 273m,
+            DueDate = new DateOnly(2026, 6, 2),
+            Category = BillCategory.CreditCard,
+            LastPaidPeriod = new DateOnly(2026, 6, 2)
+        };
+        var today = new DateOnly(2026, 5, 9);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].NextDueDate.Should().Be(new DateOnly(2026, 7, 2));
     }
 }

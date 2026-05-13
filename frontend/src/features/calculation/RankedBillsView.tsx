@@ -9,10 +9,12 @@ import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import { useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { fetchCalculation } from "./calculationSlice";
+import { markBillPaid } from "../bills/billsSlice";
 import { CATEGORY_LABELS } from "../../api/categoryLabels";
 import { getCategoryChipColor } from "../bills/categoryChip";
 import { getRankReasonChipColor } from "./rankReasonChip";
@@ -33,6 +35,11 @@ export function RankedBillsView() {
   useEffect(() => {
     dispatch(fetchCalculation());
   }, [dispatch]);
+
+  const handleMarkPaid = async (id: string, paidPeriod: string) => {
+    await dispatch(markBillPaid({ id, paidPeriod })).unwrap();
+    dispatch(fetchCalculation());
+  };
 
   return (
     <Card>
@@ -67,6 +74,18 @@ export function RankedBillsView() {
                     {b.isOverdue && (
                       <Chip label="Overdue" color="error" size="small" />
                     )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="success"
+                      startIcon={
+                        <CheckCircleOutlineOutlinedIcon fontSize="small" />
+                      }
+                      aria-label={`Mark ${b.name} paid`}
+                      onClick={() => handleMarkPaid(b.id, b.nextDueDate)}
+                    >
+                      {b.isOverdue ? "Mark as Paid" : "Mark as Paid Early"}
+                    </Button>
                     <Tooltip title={`Score: ${b.score.toFixed(2)}`}>
                       <Chip
                         label={`#${idx + 1}`}

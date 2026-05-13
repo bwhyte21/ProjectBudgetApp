@@ -17,9 +17,7 @@ var dbDir = Path.GetDirectoryName(Path.GetFullPath(dbPath));
 if (!string.IsNullOrEmpty(dbDir))
     Directory.CreateDirectory(dbDir);
 
-BsonMapper.Global.RegisterType<DateOnly>(
-    serialize: d => new BsonValue(d.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)),
-    deserialize: bson => DateOnly.FromDateTime(bson.AsDateTime));
+BsonMapperConfig.RegisterDateOnly();
 
 builder.Services.AddSingleton<LiteDatabase>(_ => new LiteDatabase(dbPath));
 builder.Services.AddScoped<IBillRepository, LiteDbBillRepository>();

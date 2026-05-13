@@ -171,6 +171,10 @@ export function LeftoverSummaryCard() {
           </Stack>
         ) : (
           <Stack spacing={2}>
+            <Typography variant="caption" color="text.secondary">
+              Each period is calculated independently &mdash; leftover does not
+              carry over to the next period.
+            </Typography>
             <PayPeriodBlock
               label={`${formatDate(w1Start)} \u2013 ${formatDate(w1End)}`}
               takeHome={perPaycheck}

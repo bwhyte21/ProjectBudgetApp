@@ -26,7 +26,8 @@ public sealed class IncomeController : ControllerBase
         var saved = _repo.Set(new Income
         {
             PerPaycheckAmount = dto.PerPaycheckAmount,
-            Frequency = dto.Frequency
+            Frequency = dto.Frequency,
+            PayAnchorDate = dto.PayAnchorDate
         });
         return Ok(IncomeDto.From(saved));
     }

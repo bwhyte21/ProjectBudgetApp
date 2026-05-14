@@ -7,6 +7,7 @@ import TableHead from "@mui/material/TableHead";
 import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
+import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -21,9 +22,11 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type PaginationState,
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
@@ -63,6 +66,10 @@ export function BillsListPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   useEffect(() => {
     dispatch(fetchBills());
@@ -198,10 +205,12 @@ export function BillsListPage() {
   const table = useReactTable({
     data: tableData,
     columns,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   return (
@@ -222,59 +231,73 @@ export function BillsListPage() {
           </Typography>
         )}
         {items.length > 0 && (
-          <Table size="small">
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const align = header.column.columnDef.meta?.align ?? "left";
-                    const canSort = header.column.getCanSort();
-                    const sorted = header.column.getIsSorted();
-                    const headerContent = flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    );
-                    return (
-                      <TableCell
-                        key={header.id}
-                        align={align}
-                        sortDirection={sorted === false ? false : sorted}
-                      >
-                        {canSort ? (
-                          <TableSortLabel
-                            active={sorted !== false}
-                            direction={sorted === false ? "asc" : sorted}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {headerContent}
-                          </TableSortLabel>
-                        ) : (
-                          headerContent
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => {
-                    const align = cell.column.columnDef.meta?.align ?? "left";
-                    return (
-                      <TableCell key={cell.id} align={align}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table size="small">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const align =
+                        header.column.columnDef.meta?.align ?? "left";
+                      const canSort = header.column.getCanSort();
+                      const sorted = header.column.getIsSorted();
+                      const headerContent = flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      );
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align={align}
+                          sortDirection={sorted === false ? false : sorted}
+                        >
+                          {canSort ? (
+                            <TableSortLabel
+                              active={sorted !== false}
+                              direction={sorted === false ? "asc" : sorted}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {headerContent}
+                            </TableSortLabel>
+                          ) : (
+                            headerContent
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => {
+                      const align = cell.column.columnDef.meta?.align ?? "left";
+                      return (
+                        <TableCell key={cell.id} align={align}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={table.getRowCount()}
+              page={pagination.pageIndex}
+              onPageChange={(_, page) => table.setPageIndex(page)}
+              rowsPerPage={pagination.pageSize}
+              onRowsPerPageChange={(e) =>
+                table.setPageSize(Number(e.target.value))
+              }
+              rowsPerPageOptions={[10, 25, 50]}
+            />
+          </>
         )}
       </CardContent>
       <BillFormDialog

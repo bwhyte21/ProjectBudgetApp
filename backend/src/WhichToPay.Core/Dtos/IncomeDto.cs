@@ -13,10 +13,13 @@ public sealed class IncomeDto
 
     public decimal MonthlyTakeHome { get; set; }
 
+    public DateOnly? PayAnchorDate { get; set; }
+
     public static IncomeDto From(Income income) => new()
     {
         PerPaycheckAmount = income.PerPaycheckAmount,
         Frequency = income.Frequency,
-        MonthlyTakeHome = income.MonthlyTakeHome
+        MonthlyTakeHome = income.MonthlyTakeHome,
+        PayAnchorDate = income.PayAnchorDate
     };
 }

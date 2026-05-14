@@ -5,6 +5,7 @@ public sealed class Income
     public Guid Id { get; set; } = Guid.NewGuid();
     public decimal PerPaycheckAmount { get; set; }
     public PayFrequency Frequency { get; set; }
+    public DateOnly? PayAnchorDate { get; set; }
 
     public decimal MonthlyTakeHome => Frequency switch
     {

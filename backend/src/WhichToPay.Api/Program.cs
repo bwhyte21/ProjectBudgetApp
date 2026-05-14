@@ -86,9 +86,9 @@ else
 }
 
 app.UseSecurityHeaders();
+app.UseRouting();
 app.UseCors("frontend");
 app.UseRateLimiter();
-app.UseRouting();
 
 app.MapControllers().RequireRateLimiting("api");
 

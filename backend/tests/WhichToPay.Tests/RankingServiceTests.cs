@@ -318,6 +318,63 @@ public class RankingServiceTests
     }
 
     [Fact]
+    public void Rank_BillDueToday_IsDueTodayNotOverdue()
+    {
+        var bill = new Bill
+        {
+            Name = "DueTodayBill",
+            MonthlyAmountOwed = 44.70m,
+            DueDate = new DateOnly(2026, 5, 14),
+            Category = BillCategory.Loan
+        };
+        var today = new DateOnly(2026, 5, 14);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].IsDueToday.Should().BeTrue();
+        result[0].NextDueDate.Should().Be(today);
+    }
+
+    [Fact]
+    public void Rank_BillDueToday_PaidThisCycle_IsNotDueToday()
+    {
+        var today = new DateOnly(2026, 5, 14);
+        var bill = new Bill
+        {
+            Name = "PaidDueTodayBill",
+            MonthlyAmountOwed = 44.70m,
+            DueDate = new DateOnly(2026, 5, 14),
+            Category = BillCategory.Loan,
+            LastPaidPeriod = today
+        };
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeFalse();
+        result[0].IsDueToday.Should().BeFalse();
+        result[0].IsPaidCurrentCycle.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Rank_BillDueYesterday_StillOverdue()
+    {
+        var bill = new Bill
+        {
+            Name = "YesterdayBill",
+            MonthlyAmountOwed = 100m,
+            DueDate = new DateOnly(2026, 5, 13),
+            Category = BillCategory.Utility
+        };
+        var today = new DateOnly(2026, 5, 14);
+
+        var result = _service.Rank(new[] { bill }, today);
+
+        result[0].IsOverdue.Should().BeTrue();
+        result[0].IsDueToday.Should().BeFalse();
+    }
+
+    [Fact]
     public void Rank_MarkedPaidEarlyFutureMonth_NextDueDateAdvancesBeyondFuture()
     {
         // Today is May 9; DueDate = June 2; bill was marked paid early with paidPeriod = June 2.

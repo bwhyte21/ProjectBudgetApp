@@ -43,11 +43,15 @@ public sealed class RankingService : IRankingService
         double maxMonthly)
     {
         var mostRecentCycle = MostRecentCycleDueDate(today, bill.DueDate);
-        var isOverdue = today >= bill.DueDate
-            && today >= mostRecentCycle
+        var isPaidCurrentCycle = bill.LastPaidPeriod.HasValue && bill.LastPaidPeriod.Value >= mostRecentCycle;
+        var isOverdue = today > bill.DueDate
+            && today > mostRecentCycle
             && (bill.LastPaidPeriod is null || bill.LastPaidPeriod < mostRecentCycle);
+        var isDueToday = !isOverdue
+            && !isPaidCurrentCycle
+            && today == mostRecentCycle;
 
-        var nextDue = isOverdue ? mostRecentCycle : NextDueDate(today, bill.DueDate);
+        var nextDue = isOverdue || isDueToday ? mostRecentCycle : NextDueDate(today, bill.DueDate);
 
         if (!isOverdue && bill.LastPaidPeriod.HasValue && bill.LastPaidPeriod.Value >= nextDue)
         {
@@ -95,7 +99,9 @@ public sealed class RankingService : IRankingService
             Score = Math.Round(score, 2),
             RankReason = reason,
             IsOverdue = isOverdue,
-            NextDueDate = nextDue
+            IsDueToday = isDueToday,
+            NextDueDate = nextDue,
+            IsPaidCurrentCycle = isPaidCurrentCycle
         };
     }
 

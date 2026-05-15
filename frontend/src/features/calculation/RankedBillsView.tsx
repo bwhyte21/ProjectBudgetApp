@@ -1,3 +1,4 @@
+import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -6,7 +7,6 @@ import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -87,40 +87,18 @@ function BillSection({
           {shown.map((b) => {
             const rank = rankMap.get(b.id) ?? 0;
             return (
-              <ListItem
-                key={b.id}
-                divider
-                secondaryAction={
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: "center" }}
-                  >
-                    {showMarkPaid && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="success"
-                        startIcon={
-                          <CheckCircleOutlineOutlinedIcon fontSize="small" />
-                        }
-                        aria-label={`Mark ${b.name} paid`}
-                        onClick={() => onMarkPaid(b.id, b.nextDueDate)}
-                      >
-                        {b.isOverdue || b.isDueToday
-                          ? "Mark as Paid"
-                          : "Mark as Paid Early"}
-                      </Button>
-                    )}
-                    <Tooltip title={`Score: ${b.score.toFixed(2)}`}>
-                      <Chip label={`#${rank}`} size="small" color="primary" />
-                    </Tooltip>
-                  </Stack>
-                }
-              >
-                <ListItemText
-                  disableTypography
-                  primary={
+              <ListItem key={b.id} divider disableGutters sx={{ px: 2, py: 1 }}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    width: "100%",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    rowGap: 1,
+                  }}
+                >
+                  <Box sx={{ flex: "1 1 220px", minWidth: 0 }}>
                     <Stack
                       direction="row"
                       spacing={1}
@@ -147,9 +125,7 @@ function BillSection({
                         />
                       )}
                     </Stack>
-                  }
-                  secondary={
-                    b.isDueToday ? (
+                    {b.isDueToday ? (
                       <Chip
                         size="small"
                         variant="outlined"
@@ -167,9 +143,38 @@ function BillSection({
                           sx={{ mt: 0.5 }}
                         />
                       )
-                    )
-                  }
-                />
+                    )}
+                  </Box>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                      flex: "0 0 auto",
+                      ml: "auto",
+                    }}
+                  >
+                    {showMarkPaid && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        startIcon={
+                          <CheckCircleOutlineOutlinedIcon fontSize="small" />
+                        }
+                        aria-label={`Mark ${b.name} paid`}
+                        onClick={() => onMarkPaid(b.id, b.nextDueDate)}
+                      >
+                        {b.isOverdue || b.isDueToday
+                          ? "Mark as Paid"
+                          : "Mark as Paid Early"}
+                      </Button>
+                    )}
+                    <Tooltip title={`Score: ${b.score.toFixed(2)}`}>
+                      <Chip label={`#${rank}`} size="small" color="primary" />
+                    </Tooltip>
+                  </Stack>
+                </Stack>
               </ListItem>
             );
           })}

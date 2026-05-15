@@ -160,6 +160,12 @@ export function BillsListPage() {
         header: "Next due",
         cell: (info) => {
           const v = info.getValue();
+          const hasEverBeenPaid = Boolean(info.row.original.lastPaidAt);
+          if (!hasEverBeenPaid) {
+            if (calcStatus === "loading" && !v)
+              return <CircularProgress size={14} />;
+            return "-";
+          }
           if (v) return formatDueDate(v);
           if (calcStatus === "loading") return <CircularProgress size={14} />;
           return "-";

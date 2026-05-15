@@ -8,6 +8,13 @@ A local-only bill-prioritization web app. Enter your bills and take-home pay, an
 
 ![mainScreenshot](https://github.com/user-attachments/assets/167a3bb9-54b1-4f79-8509-3ff5a501018c)
 
+## Features
+
+- **Bill ranking** - multi-factor weighted score (urgency, balance, category) surfaces which bill to pay first. Bills due today are flagged and always appear at the top of the ranked list.
+- **Mark As Paid (Early)** - mark a bill paid before its due date; the app advances the due date to the next billing cycle so it re-appears at the right time.
+- **Pay-anchor date** - enter a payday anchor date alongside your pay frequency (weekly, biweekly, semimonthly, monthly) so the app shows a paycheck-aware pay-period leftover summary.
+- **Local-only storage** - all data lives in a single LiteDB file on your machine. No accounts, no cloud sync.
+
 ## Project Layout
 
 ```text
@@ -55,7 +62,7 @@ cd backend
 dotnet test
 ```
 
-Runs the xUnit tests for the ranking service. Expect 10 green tests.
+Runs the xUnit tests for the ranking service and repository. Expect 27 green tests.
 
 ## Inspect / Access LiteDB
 

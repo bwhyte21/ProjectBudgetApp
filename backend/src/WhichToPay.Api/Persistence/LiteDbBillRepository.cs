@@ -43,10 +43,12 @@ public sealed class LiteDbBillRepository : IBillRepository
     }
 
     // Repairs rows written under the previous DateOnly serializer, which stored
-    // a UTC-kind DateTime in BSON. LiteDB does not preserve DateTimeKind and
-    // converts to local on write, so on read the day rolled back by one for any
-    // host west of UTC. Applies +1 day to DueDate / LastPaidPeriod fields that
-    // are still stored as BsonType.DateTime. Idempotent via marker doc.
+    // the value as a UTC-midnight DateTime. LiteDB returns DateTime in local on
+    // read, so on hosts west of UTC the previous read path produced a date one
+    // day earlier than the user originally entered. To recover the intended
+    // calendar day on any host, normalize the stored DateTime back to UTC and
+    // take its date — that's the value originally written, regardless of the
+    // current host timezone. Idempotent via marker doc.
     private void MigrateDateOnlyFromUtcDateTime()
     {
         var meta = _db.GetCollection(MigrationsCollection);
@@ -55,8 +57,8 @@ public sealed class LiteDbBillRepository : IBillRepository
         var raw = _db.GetCollection(Collection);
         foreach (var doc in raw.FindAll().ToList())
         {
-            var changed = ShiftIfBsonDateTime(doc, "DueDate")
-                        | ShiftIfBsonDateTime(doc, "LastPaidPeriod");
+            var changed = NormalizeIfBsonDateTime(doc, "DueDate")
+                        | NormalizeIfBsonDateTime(doc, "LastPaidPeriod");
             if (changed) raw.Update(doc);
         }
 
@@ -67,12 +69,13 @@ public sealed class LiteDbBillRepository : IBillRepository
         });
     }
 
-    private static bool ShiftIfBsonDateTime(BsonDocument doc, string field)
+    private static bool NormalizeIfBsonDateTime(BsonDocument doc, string field)
     {
         if (!doc.ContainsKey(field) || doc[field].IsNull) return false;
         if (doc[field].Type != BsonType.DateTime) return false;
-        var shifted = DateOnly.FromDateTime(doc[field].AsDateTime).AddDays(1);
-        doc[field] = shifted.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var utc = doc[field].AsDateTime.ToUniversalTime();
+        doc[field] = DateOnly.FromDateTime(utc)
+            .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         return true;
     }
 

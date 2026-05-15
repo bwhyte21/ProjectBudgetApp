@@ -56,13 +56,15 @@ public class LiteDbBillRepositoryTests
     }
 
     [Fact]
-    public void MigrateDateOnlyFromUtcDateTime_ShiftsExistingDateTimeRowsForwardOneDay()
+    public void MigrateDateOnlyFromUtcDateTime_RecoversOriginalUtcDate()
     {
         using var db = new LiteDatabase(":memory:");
 
-        // Simulate a row written under the previous buggy serializer: a UTC-kind
-        // DateTime at midnight, which LiteDB will store as the local equivalent
-        // (one day earlier for hosts west of UTC).
+        // Simulate a row written under the previous buggy serializer: a
+        // UTC-midnight DateTime. LiteDB returns DateTime as local on read,
+        // so the originally-stored calendar day must be recovered by
+        // converting back to UTC during migration. The asserted date is
+        // therefore the same on any host timezone.
         var raw = db.GetCollection("bills");
         var legacyDoc = new BsonDocument
         {
@@ -74,7 +76,6 @@ public class LiteDbBillRepositoryTests
         };
         raw.Insert(legacyDoc);
 
-        // Constructor runs MigrateDateOnlyFromUtcDateTime.
         var repo = new LiteDbBillRepository(db);
 
         var loaded = repo.GetById(legacyDoc["_id"].AsGuid);

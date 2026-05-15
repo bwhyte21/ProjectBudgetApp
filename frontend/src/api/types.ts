@@ -33,12 +33,12 @@ export const INT_TO_CATEGORY: Record<number, BillCategory> = Object.fromEntries(
 
 export type PayFrequency = "Weekly" | "Biweekly" | "Semimonthly" | "Monthly";
 
-export const PAY_FREQUENCIES: PayFrequency[] = [
+export const PAY_FREQUENCIES = [
   "Weekly",
   "Biweekly",
   "Semimonthly",
   "Monthly",
-];
+] as const satisfies readonly PayFrequency[];
 
 export const FREQUENCY_TO_INT: Record<PayFrequency, number> = {
   Weekly: 0,
@@ -60,6 +60,8 @@ export interface Bill {
   dueDate: string;
   category: BillCategory;
   minimumPayment?: number | null;
+  lastPaidPeriod?: string | null;
+  lastPaidAt?: string | null;
 }
 
 export interface BillInput {
@@ -75,18 +77,22 @@ export interface Income {
   perPaycheckAmount: number;
   frequency: PayFrequency;
   monthlyTakeHome: number;
+  payAnchorDate?: string | null;
 }
 
 export interface IncomeInput {
   perPaycheckAmount: number;
   frequency: PayFrequency;
+  payAnchorDate?: string | null;
 }
 
 export interface RankedBill extends Bill {
   score: number;
   rankReason: string;
   isOverdue: boolean;
+  isDueToday: boolean;
   nextDueDate: string;
+  isPaidCurrentCycle: boolean;
 }
 
 export interface CalculationResult {
@@ -104,6 +110,7 @@ interface RankedBillWire extends Omit<RankedBill, "category"> {
 }
 interface IncomeWire extends Omit<Income, "frequency"> {
   frequency: number;
+  payAnchorDate?: string | null;
 }
 
 export const fromBillWire = (b: BillWire): Bill => ({
@@ -124,4 +131,5 @@ export const toBillWirePayload = (b: BillInput) => ({
 export const toIncomeWirePayload = (i: IncomeInput) => ({
   ...i,
   frequency: FREQUENCY_TO_INT[i.frequency],
+  payAnchorDate: i.payAnchorDate ?? null,
 });

@@ -19,7 +19,7 @@ export function App() {
         <AppBar position="static" color="primary" enableColorOnDark>
           <Toolbar>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Which To Pay
+              Which To Pay - A Personal Budget App
             </Typography>
             <ThemeToggle />
           </Toolbar>

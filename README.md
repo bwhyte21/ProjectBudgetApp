@@ -1,4 +1,4 @@
-# Which To Pay
+# Which To Pay - A Personal Budget App
 
 A local-only bill-prioritization web app. Enter your bills and take-home pay, and the app ranks which bills to pay first using a multi-factor weighted score so you avoid late fees and have money left to spend or save.
 
@@ -6,8 +6,7 @@ A local-only bill-prioritization web app. Enter your bills and take-home pay, an
 - **Frontend:** React + TypeScript + Vite + Redux Toolkit + MUI
 - **Storage:** local LiteDB file. No cloud, no accounts, no auth.
 
-<img width="2175" height="898" alt="mainScreenshot" src="https://github.com/user-attachments/assets/167a3bb9-54b1-4f79-8509-3ff5a501018c" />
-
+![mainScreenshot](https://github.com/user-attachments/assets/167a3bb9-54b1-4f79-8509-3ff5a501018c)
 
 ## Project Layout
 
@@ -94,12 +93,12 @@ This app has no user authentication because it is intended for local use only. T
 
 Backend settings live in `backend/src/WhichToPay.Api/appsettings.json`:
 
-| Key | Default | Purpose |
-| --- | --- | --- |
-| `LiteDb:Path` | `./data/whichtopay.db` | Database file location |
-| `Cors:AllowedOrigin` | `http://localhost:5173` | Allowed frontend origin |
-| `RateLimit:GlobalPerMinute` | `200` | Global per-IP request cap |
-| `RateLimit:ApiPerMinute` | `60` | API-controller per-IP request cap |
-| `Kestrel:Port` | `5180` | Backend port |
+| Key                         | Default                 | Purpose                           |
+| --------------------------- | ----------------------- | --------------------------------- |
+| `LiteDb:Path`               | `./data/whichtopay.db`  | Database file location            |
+| `Cors:AllowedOrigin`        | `http://localhost:5173` | Allowed frontend origin           |
+| `RateLimit:GlobalPerMinute` | `200`                   | Global per-IP request cap         |
+| `RateLimit:ApiPerMinute`    | `60`                    | API-controller per-IP request cap |
+| `Kestrel:Port`              | `5180`                  | Backend port                      |
 
 Frontend port is `5173` (set in `frontend/vite.config.ts`).

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
@@ -7,9 +7,11 @@ import TableHead from "@mui/material/TableHead";
 import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
+import TablePagination from "@mui/material/TablePagination";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -20,9 +22,11 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type PaginationState,
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
@@ -42,6 +46,8 @@ declare module "@tanstack/react-table" {
   }
 }
 
+type BillRow = Bill & { nextDueDate: string | null };
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     n,
@@ -50,25 +56,51 @@ const formatCurrency = (n: number) =>
 const formatDueDate = (iso: string) =>
   format(parseISO(iso.substring(0, 10) + "T00:00:00"), "MMM d, yyyy");
 
+const formatLastPaidAt = (iso: string) =>
+  format(parseISO(iso), "MMM d, yyyy h:mm a");
+
 export function BillsListPage() {
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector((s) => s.bills);
+  const { result: calcResult, status: calcStatus } = useAppSelector(
+    (s) => s.calculation,
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   useEffect(() => {
     dispatch(fetchBills());
+    dispatch(fetchCalculation());
   }, [dispatch]);
+
+  const nextDueById = useMemo(() => {
+    const map = new Map<string, string>();
+    calcResult?.rankedBills.forEach((r) => map.set(r.id, r.nextDueDate));
+    return map;
+  }, [calcResult]);
+
+  const tableData = useMemo<BillRow[]>(
+    () =>
+      items.map((b) => ({
+        ...b,
+        nextDueDate: nextDueById.get(b.id) ?? null,
+      })),
+    [items, nextDueById],
+  );
 
   const openAdd = () => {
     setEditing(null);
     setDialogOpen(true);
   };
-  const openEdit = (b: Bill) => {
+  const openEdit = useCallback((b: Bill) => {
     setEditing(b);
     setDialogOpen(true);
-  };
+  }, []);
   const handleSubmit = async (input: BillInput) => {
     if (editing) {
       await dispatch(updateBill({ id: editing.id, input })).unwrap();
@@ -77,13 +109,16 @@ export function BillsListPage() {
     }
     dispatch(fetchCalculation());
   };
-  const handleDelete = async (id: string) => {
-    await dispatch(deleteBill(id)).unwrap();
-    dispatch(fetchCalculation());
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await dispatch(deleteBill(id)).unwrap();
+      dispatch(fetchCalculation());
+    },
+    [dispatch],
+  );
 
-  const columns = useMemo<ColumnDef<Bill, unknown>[]>(() => {
-    const ch = createColumnHelper<Bill>();
+  const columns = useMemo<ColumnDef<BillRow, unknown>[]>(() => {
+    const ch = createColumnHelper<BillRow>();
     return [
       ch.accessor("name", {
         header: "Name",
@@ -121,6 +156,30 @@ export function BillsListPage() {
         cell: (info) => formatDueDate(info.getValue()),
         meta: { align: "right" },
       }),
+      ch.accessor("nextDueDate", {
+        header: "Next due",
+        cell: (info) => {
+          const v = info.getValue();
+          const hasEverBeenPaid = Boolean(info.row.original.lastPaidAt);
+          if (!hasEverBeenPaid) {
+            if (calcStatus === "loading" && !v)
+              return <CircularProgress size={14} />;
+            return "-";
+          }
+          if (v) return formatDueDate(v);
+          if (calcStatus === "loading") return <CircularProgress size={14} />;
+          return "-";
+        },
+        meta: { align: "right" },
+      }),
+      ch.accessor("lastPaidAt", {
+        header: "Last Paid",
+        cell: (info) => {
+          const v = info.getValue();
+          return v ? formatLastPaidAt(v) : "-";
+        },
+        meta: { align: "right" },
+      }),
       ch.display({
         id: "actions",
         header: "Actions",
@@ -149,17 +208,18 @@ export function BillsListPage() {
           </Stack>
         ),
       }),
-    ] as ColumnDef<Bill, unknown>[];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    ] as ColumnDef<BillRow, unknown>[];
+  }, [calcStatus, openEdit, handleDelete]);
 
-  const table = useReactTable({
-    data: items,
+  const table = useReactTable<BillRow>({
+    data: tableData,
     columns,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   return (
@@ -180,59 +240,73 @@ export function BillsListPage() {
           </Typography>
         )}
         {items.length > 0 && (
-          <Table size="small">
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const align = header.column.columnDef.meta?.align ?? "left";
-                    const canSort = header.column.getCanSort();
-                    const sorted = header.column.getIsSorted();
-                    const headerContent = flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    );
-                    return (
-                      <TableCell
-                        key={header.id}
-                        align={align}
-                        sortDirection={sorted === false ? false : sorted}
-                      >
-                        {canSort ? (
-                          <TableSortLabel
-                            active={sorted !== false}
-                            direction={sorted === false ? "asc" : sorted}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {headerContent}
-                          </TableSortLabel>
-                        ) : (
-                          headerContent
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => {
-                    const align = cell.column.columnDef.meta?.align ?? "left";
-                    return (
-                      <TableCell key={cell.id} align={align}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table size="small">
+              <TableHead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const align =
+                        header.column.columnDef.meta?.align ?? "left";
+                      const canSort = header.column.getCanSort();
+                      const sorted = header.column.getIsSorted();
+                      const headerContent = flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      );
+                      return (
+                        <TableCell
+                          key={header.id}
+                          align={align}
+                          sortDirection={sorted === false ? false : sorted}
+                        >
+                          {canSort ? (
+                            <TableSortLabel
+                              active={sorted !== false}
+                              direction={sorted === false ? "asc" : sorted}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {headerContent}
+                            </TableSortLabel>
+                          ) : (
+                            headerContent
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHead>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => {
+                      const align = cell.column.columnDef.meta?.align ?? "left";
+                      return (
+                        <TableCell key={cell.id} align={align}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={table.getRowCount()}
+              page={pagination.pageIndex}
+              onPageChange={(_, page) => table.setPageIndex(page)}
+              rowsPerPage={pagination.pageSize}
+              onRowsPerPageChange={(e) =>
+                table.setPageSize(Number(e.target.value))
+              }
+              rowsPerPageOptions={[10, 25, 50]}
+            />
+          </>
         )}
       </CardContent>
       <BillFormDialog

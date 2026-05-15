@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WhichToPay.Core\WhichToPay.Core.csproj" />
+    <ProjectReference Include="..\..\src\WhichToPay.Api\WhichToPay.Api.csproj" />
   </ItemGroup>
 
 </Project>

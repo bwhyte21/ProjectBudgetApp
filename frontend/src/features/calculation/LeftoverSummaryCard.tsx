@@ -1,59 +1,125 @@
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
-import { addDays, format, parseISO } from "date-fns";
-import { useState } from "react";
-import type { RankedBill } from "../../api/types";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { Fragment, useState } from "react";
+import {
+  billInWindow,
+  countPaychecksInMonth,
+  getPayPeriodWindows,
+} from "./payPeriodUtils";
+import type { PayFrequency, RankedBill } from "../../api/types";
 import { useAppSelector } from "../../store/hooks";
 
 type ViewMode = "monthly" | "biweekly";
+
+const PER_PAYCHECK_LABEL: Record<PayFrequency, string> = {
+  Weekly: "Weekly take-home",
+  Biweekly: "Bi-weekly take-home",
+  Semimonthly: "Semimonthly take-home",
+  Monthly: "Monthly take-home",
+};
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     n,
   );
 
-const formatDate = (d: Date) => format(d, "MMM d");
-
-function billsTotalInWindow(
-  bills: RankedBill[],
-  windowStart: Date,
-  windowEnd: Date,
-): number {
-  return bills
-    .filter((b) => {
-      const due = parseISO(b.nextDueDate.substring(0, 10) + "T00:00:00");
-      return due >= windowStart && due <= windowEnd;
-    })
-    .reduce((sum, b) => sum + b.monthlyAmountOwed, 0);
-}
-
 interface PayPeriodBlockProps {
   label: string;
+  takeHomeLabel: string;
   takeHome: number;
-  billsTotal: number;
-  leftover: number;
+  bills: RankedBill[];
+  excludePaid: boolean;
 }
 
 function PayPeriodBlock({
   label,
+  takeHomeLabel,
   takeHome,
-  billsTotal,
-  leftover,
+  bills,
+  excludePaid,
 }: PayPeriodBlockProps) {
+  const [expanded, setExpanded] = useState(false);
+  const billsTotal = bills.reduce((sum, b) => sum + b.monthlyAmountOwed, 0);
+  const leftover = takeHome - billsTotal;
   const leftoverColor = leftover < 0 ? "error.main" : "success.main";
+
   return (
     <Stack spacing={1}>
       <Typography variant="subtitle2" color="text.secondary">
         {label}
       </Typography>
-      <Row label="Bi-weekly take-home" value={formatCurrency(takeHome)} />
-      <Row label="Bills due this period" value={formatCurrency(billsTotal)} />
+      <Row label={takeHomeLabel} value={formatCurrency(takeHome)} />
+      <Stack
+        direction="row"
+        sx={{ justifyContent: "space-between", alignItems: "center" }}
+      >
+        <Typography color="text.secondary">Bills due this period</Typography>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+          <Typography>{formatCurrency(billsTotal)}</Typography>
+          <IconButton
+            size="small"
+            onClick={() => setExpanded((p) => !p)}
+            aria-label="toggle bill breakdown"
+          >
+            {expanded ? (
+              <ExpandLessIcon fontSize="small" />
+            ) : (
+              <ExpandMoreIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Stack>
+      </Stack>
+      <Collapse in={expanded}>
+        <Stack spacing={0.5} sx={{ pl: 1, pb: 0.5 }}>
+          {bills.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No bills due this period.
+            </Typography>
+          ) : (
+            bills.map((b) => (
+              <Stack
+                key={b.id}
+                direction="row"
+                sx={{ justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={0.75}
+                  sx={{ alignItems: "center" }}
+                >
+                  <Typography variant="body2">{b.name}</Typography>
+                  {!excludePaid && b.isPaidCurrentCycle && (
+                    <Chip
+                      label="Paid this cycle"
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ height: 18, fontSize: "0.65rem" }}
+                    />
+                  )}
+                </Stack>
+                <Typography variant="body2">
+                  {formatCurrency(b.monthlyAmountOwed)}
+                </Typography>
+              </Stack>
+            ))
+          )}
+        </Stack>
+      </Collapse>
       <Stack
         direction="row"
         sx={{
@@ -89,6 +155,7 @@ export function LeftoverSummaryCard() {
   const result = useAppSelector((s) => s.calculation.result);
   const income = useAppSelector((s) => s.income.value);
   const [mode, setMode] = useState<ViewMode>("monthly");
+  const [excludePaid, setExcludePaid] = useState(false);
 
   const toggle = (
     <ToggleButtonGroup
@@ -119,14 +186,21 @@ export function LeftoverSummaryCard() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const w1Start = today;
-  const w1End = addDays(today, 13);
-  const w2Start = addDays(today, 14);
-  const w2End = addDays(today, 27);
-
+  const frequency = income?.frequency ?? "Monthly";
+  const allWindows = getPayPeriodWindows(
+    frequency,
+    today,
+    income?.payAnchorDate,
+  );
+  const windows =
+    (frequency === "Weekly" || frequency === "Biweekly") &&
+    income?.payAnchorDate
+      ? allWindows.slice(
+          0,
+          countPaychecksInMonth(frequency, today, income.payAnchorDate),
+        )
+      : allWindows;
   const perPaycheck = income?.perPaycheckAmount ?? 0;
-  const w1Total = billsTotalInWindow(result.rankedBills, w1Start, w1End);
-  const w2Total = billsTotalInWindow(result.rankedBills, w2Start, w2End);
 
   const leftoverColor = result.leftover < 0 ? "error.main" : "success.main";
 
@@ -171,19 +245,50 @@ export function LeftoverSummaryCard() {
           </Stack>
         ) : (
           <Stack spacing={2}>
-            <PayPeriodBlock
-              label={`${formatDate(w1Start)} \u2013 ${formatDate(w1End)}`}
-              takeHome={perPaycheck}
-              billsTotal={w1Total}
-              leftover={perPaycheck - w1Total}
-            />
-            <Divider />
-            <PayPeriodBlock
-              label={`${formatDate(w2Start)} \u2013 ${formatDate(w2End)}`}
-              takeHome={perPaycheck}
-              billsTotal={w2Total}
-              leftover={perPaycheck - w2Total}
-            />
+            <Stack
+              direction="row"
+              sx={{ justifyContent: "space-between", alignItems: "center" }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                Each period is calculated independently &mdash; leftover does
+                not carry over to the next period.
+              </Typography>
+              <Tooltip
+                title="Hide bills already marked as paid from the pay period breakdown"
+                placement="top"
+                arrow
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={excludePaid}
+                      onChange={(e) => setExcludePaid(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Typography variant="caption">Exclude paid</Typography>
+                  }
+                  sx={{ ml: 1, whiteSpace: "nowrap" }}
+                />
+              </Tooltip>
+            </Stack>
+            {windows.map((w, i) => (
+              <Fragment key={w.label}>
+                {i > 0 && <Divider />}
+                <PayPeriodBlock
+                  label={w.label}
+                  takeHomeLabel={PER_PAYCHECK_LABEL[frequency]}
+                  takeHome={perPaycheck}
+                  bills={result.rankedBills.filter(
+                    (b) =>
+                      billInWindow(b, w) &&
+                      (!excludePaid || !b.isPaidCurrentCycle),
+                  )}
+                  excludePaid={excludePaid}
+                />
+              </Fragment>
+            ))}
           </Stack>
         )}
       </CardContent>

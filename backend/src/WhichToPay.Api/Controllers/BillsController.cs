@@ -67,4 +67,20 @@ public sealed class BillsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public IActionResult Delete(Guid id) =>
         _repo.Delete(id) ? NoContent() : NotFound();
+
+    [HttpPost("{id:guid}/mark-paid")]
+    public ActionResult<BillReadDto> MarkPaid(Guid id, MarkPaidDto dto)
+    {
+        var maxAllowed = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(1);
+        if (dto.PaidPeriod > maxAllowed)
+            return BadRequest(new { error = "PaidPeriod is too far in the future." });
+
+        var existing = _repo.GetById(id);
+        if (existing is null) return NotFound();
+
+        existing.LastPaidPeriod = dto.PaidPeriod;
+        existing.LastPaidAt = DateTime.UtcNow;
+        _repo.Update(existing);
+        return Ok(BillReadDto.From(existing));
+    }
 }

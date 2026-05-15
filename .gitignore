@@ -29,3 +29,4 @@ Thumbs.db
 .claude/
 /.github/skills
 .github/copilot-instructions.md
+tmp/

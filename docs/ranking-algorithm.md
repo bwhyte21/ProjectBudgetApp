@@ -120,6 +120,18 @@ Two credit cards: SmallCard $200 balance, BigCard $8000 balance, both with $100 
 
 Without log scaling, SmallCard's 200/8000 = 0.025 - a 40x gap. Log scaling turns it into a 1.7x gap, which still ranks BigCard ahead but does not pretend SmallCard is irrelevant. Useful when the dataset has one very large mortgage and several smaller credit cards.
 
+## Due-Today Flag
+
+Bills due today are identified before scoring and exposed as a boolean field (`IsDueToday`) on the ranked output. A bill is "due today" when:
+
+- Its most-recent cycle due date falls on today's date, AND
+- It has not already been paid in the current cycle (`LastPaidPeriod < mostRecentCycleDue`), AND
+- It is not already overdue (overdue takes precedence).
+
+`IsDueToday` is a UI signal only - it does not add a numeric bonus to the score. Because urgency is already `1.0` for a bill due today (`daysUntilDue = 0`), the composite score naturally pushes due-today bills to the top. The flag lets the frontend render a distinct visual indicator without re-implementing the date logic.
+
+Implementation: `Score()` in [backend/src/WhichToPay.Core/Ranking/RankingService.cs](../backend/src/WhichToPay.Core/Ranking/RankingService.cs), lines 50-52.
+
 ## Scoring Pipeline (ASCII)
 
 ```text

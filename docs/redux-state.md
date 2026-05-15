@@ -16,8 +16,8 @@ The frontend has four kinds of shared state: bills (a list), income (a singleton
 ### 1. billsSlice
 
 - **State:** `{ items: Bill[]; status: 'idle' | 'loading' | 'error'; error?: string }`
-- **Thunks:** `fetchBills`, `createBill`, `updateBill`, `deleteBill`
-- **Triggered by:** `BillsListPage` mount (fetches), `BillFormDialog` submit (creates or updates), the row delete button.
+- **Thunks:** `fetchBills`, `createBill`, `updateBill`, `deleteBill`, `markBillPaid`
+- **Triggered by:** `BillsListPage` mount (fetches), `BillFormDialog` submit (creates or updates), the row delete button, the "Mark As Paid" action on a ranked bill row (`markBillPaid`).
 - **Side effect:** any successful mutation should also dispatch `fetchCalculation` so the ranked view stays in sync. The current code does this in `BillsListPage` after each thunk resolves.
 - **Implementation:** [frontend/src/features/bills/billsSlice.ts](../frontend/src/features/bills/billsSlice.ts)
 

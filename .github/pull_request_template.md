@@ -1,4 +1,4 @@
-# <short title>
+# [short title]
 
 ## Summary
 
@@ -6,19 +6,19 @@
 
 ## Changes
 
-### Backend (`backend/`)
+### Backend (`backend/`) (If applicable)
 
 -
 
-### Frontend (`frontend/`)
+### Frontend (`frontend/`) (If applicable)
 
 -
 
-### Tests
+### Tests (If applicable)
 
 -
 
-### Docs / config
+### Docs / config (If applicable)
 
 -
 
@@ -26,6 +26,6 @@
 
 -
 
-## Test plan
+## Test plan (If applicable)
 
 - [ ]

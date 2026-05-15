@@ -46,6 +46,8 @@ declare module "@tanstack/react-table" {
   }
 }
 
+type BillRow = Bill & { nextDueDate: string | null };
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
     n,
@@ -82,11 +84,11 @@ export function BillsListPage() {
     return map;
   }, [calcResult]);
 
-  const tableData = useMemo(
+  const tableData = useMemo<BillRow[]>(
     () =>
       items.map((b) => ({
         ...b,
-        dueDate: nextDueById.get(b.id) ?? b.dueDate,
+        nextDueDate: nextDueById.get(b.id) ?? null,
       })),
     [items, nextDueById],
   );
@@ -95,14 +97,10 @@ export function BillsListPage() {
     setEditing(null);
     setDialogOpen(true);
   };
-  const openEdit = useCallback(
-    (b: Bill) => {
-      const original = items.find((item) => item.id === b.id) ?? b;
-      setEditing(original);
-      setDialogOpen(true);
-    },
-    [items],
-  );
+  const openEdit = useCallback((b: Bill) => {
+    setEditing(b);
+    setDialogOpen(true);
+  }, []);
   const handleSubmit = async (input: BillInput) => {
     if (editing) {
       await dispatch(updateBill({ id: editing.id, input })).unwrap();
@@ -119,8 +117,8 @@ export function BillsListPage() {
     [dispatch],
   );
 
-  const columns = useMemo<ColumnDef<Bill, unknown>[]>(() => {
-    const ch = createColumnHelper<Bill>();
+  const columns = useMemo<ColumnDef<BillRow, unknown>[]>(() => {
+    const ch = createColumnHelper<BillRow>();
     return [
       ch.accessor("name", {
         header: "Name",
@@ -155,11 +153,16 @@ export function BillsListPage() {
       }),
       ch.accessor("dueDate", {
         header: "Due date",
+        cell: (info) => formatDueDate(info.getValue()),
+        meta: { align: "right" },
+      }),
+      ch.accessor("nextDueDate", {
+        header: "Next due",
         cell: (info) => {
-          if (nextDueById.size === 0 && calcStatus === "loading") {
-            return <CircularProgress size={14} />;
-          }
-          return formatDueDate(info.getValue());
+          const v = info.getValue();
+          if (v) return formatDueDate(v);
+          if (calcStatus === "loading") return <CircularProgress size={14} />;
+          return "-";
         },
         meta: { align: "right" },
       }),
@@ -199,10 +202,10 @@ export function BillsListPage() {
           </Stack>
         ),
       }),
-    ] as ColumnDef<Bill, unknown>[];
-  }, [nextDueById, calcStatus, openEdit, handleDelete]);
+    ] as ColumnDef<BillRow, unknown>[];
+  }, [calcStatus, openEdit, handleDelete]);
 
-  const table = useReactTable({
+  const table = useReactTable<BillRow>({
     data: tableData,
     columns,
     state: { sorting, pagination },

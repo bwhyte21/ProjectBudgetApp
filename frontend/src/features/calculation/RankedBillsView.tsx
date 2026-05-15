@@ -78,7 +78,9 @@ function BillSection({
           color="text.secondary"
           sx={{ pl: 1, pb: 1 }}
         >
-          Paid bills have been hidden.
+          {hidePaid && bills.length > 0
+            ? "Paid bills have been hidden."
+            : "No bills due this period."}
         </Typography>
       ) : (
         <List dense disablePadding>

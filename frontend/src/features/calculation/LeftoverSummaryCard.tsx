@@ -20,10 +20,17 @@ import {
   countPaychecksInMonth,
   getPayPeriodWindows,
 } from "./payPeriodUtils";
-import type { RankedBill } from "../../api/types";
+import type { PayFrequency, RankedBill } from "../../api/types";
 import { useAppSelector } from "../../store/hooks";
 
 type ViewMode = "monthly" | "biweekly";
+
+const PER_PAYCHECK_LABEL: Record<PayFrequency, string> = {
+  Weekly: "Weekly take-home",
+  Biweekly: "Bi-weekly take-home",
+  Semimonthly: "Semimonthly take-home",
+  Monthly: "Monthly take-home",
+};
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
@@ -32,6 +39,7 @@ const formatCurrency = (n: number) =>
 
 interface PayPeriodBlockProps {
   label: string;
+  takeHomeLabel: string;
   takeHome: number;
   bills: RankedBill[];
   excludePaid: boolean;
@@ -39,6 +47,7 @@ interface PayPeriodBlockProps {
 
 function PayPeriodBlock({
   label,
+  takeHomeLabel,
   takeHome,
   bills,
   excludePaid,
@@ -53,7 +62,7 @@ function PayPeriodBlock({
       <Typography variant="subtitle2" color="text.secondary">
         {label}
       </Typography>
-      <Row label="Bi-weekly take-home" value={formatCurrency(takeHome)} />
+      <Row label={takeHomeLabel} value={formatCurrency(takeHome)} />
       <Stack
         direction="row"
         sx={{ justifyContent: "space-between", alignItems: "center" }}
@@ -269,6 +278,7 @@ export function LeftoverSummaryCard() {
                 {i > 0 && <Divider />}
                 <PayPeriodBlock
                   label={w.label}
+                  takeHomeLabel={PER_PAYCHECK_LABEL[frequency]}
                   takeHome={perPaycheck}
                   bills={result.rankedBills.filter(
                     (b) =>

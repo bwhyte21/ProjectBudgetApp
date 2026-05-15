@@ -16,7 +16,11 @@ export interface PeriodWindow {
 }
 
 const fmt = (d: Date) => format(d, "MMM d");
-const windowLabel = (s: Date, e: Date) => `${fmt(s)} \u2013 ${fmt(e)}`;
+const fmtWithYear = (d: Date) => format(d, "MMM d, yyyy");
+const windowLabel = (s: Date, e: Date) =>
+  s.getFullYear() === e.getFullYear()
+    ? `${fmt(s)} \u2013 ${fmt(e)}`
+    : `${fmtWithYear(s)} \u2013 ${fmtWithYear(e)}`;
 
 export function getPayPeriodWindows(
   frequency: PayFrequency,
@@ -90,7 +94,7 @@ export function getPayPeriodWindows(
 }
 
 export function countPaychecksInMonth(
-  frequency: PayFrequency,
+  frequency: "Weekly" | "Biweekly",
   today: Date,
   anchorDate: string,
 ): number {

@@ -6,7 +6,11 @@ export const incomeSchema = z.object({
     .number({ message: "Required" })
     .min(0.01, "Must be greater than zero"),
   frequency: z.enum(PAY_FREQUENCIES),
-  payAnchorDate: z.string().nullable().optional(),
+  payAnchorDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+    .nullable()
+    .optional(),
 });
 
 export type IncomeFormValues = z.infer<typeof incomeSchema>;

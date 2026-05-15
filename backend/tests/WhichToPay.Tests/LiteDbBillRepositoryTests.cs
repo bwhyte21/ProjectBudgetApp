@@ -106,4 +106,32 @@ public class LiteDbBillRepositoryTests
         afterFirst.Should().Be(new DateOnly(2026, 6, 6));
         afterSecond.Should().Be(afterFirst);
     }
+
+    [Fact]
+    public void DateOnlyDeserializer_ReadsLegacyBsonDateTime()
+    {
+        using var db = new LiteDatabase(":memory:");
+
+        // Simulate a row in a collection that has no explicit migration (e.g.
+        // income.PayAnchorDate written under the previous serializer): the
+        // DateOnly field is stored as BsonType.DateTime rather than a string.
+        var raw = db.GetCollection("bills");
+        var id = Guid.NewGuid();
+        raw.Insert(new BsonDocument
+        {
+            ["_id"] = id,
+            ["Name"] = "Legacy",
+            ["MonthlyAmountOwed"] = 10m,
+            ["DueDate"] = new DateTime(2026, 6, 6, 0, 0, 0, DateTimeKind.Utc),
+            ["Category"] = (int)BillCategory.Other
+        });
+
+        // Bypass the migration to assert the deserializer alone tolerates the
+        // legacy DateTime form.
+        var typed = db.GetCollection<Bill>("bills");
+        var loaded = typed.FindById(id);
+
+        loaded.Should().NotBeNull();
+        loaded!.DueDate.Should().Be(new DateOnly(2026, 6, 6));
+    }
 }

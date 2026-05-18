@@ -130,7 +130,9 @@ Bills due today are identified before scoring and exposed as a boolean field (`I
 
 `IsDueToday` is a UI signal only - it does not add a numeric bonus to the score. Because urgency is already `1.0` for a bill due today (`daysUntilDue = 0`), the composite score naturally pushes due-today bills to the top. The flag lets the frontend render a distinct visual indicator without re-implementing the date logic.
 
-Implementation: `Score()` in [backend/src/WhichToPay.Core/Ranking/RankingService.cs](../backend/src/WhichToPay.Core/Ranking/RankingService.cs), lines 50-52.
+**NOTE:** the next cycle's due date is materialized on the bill record by the MarkPaid endpoint, not derived on the fly. When a bill is marked paid, the API advances `DueDate` by one month (anchored to the original day, clamped to the target month's length). The ranking service therefore reads `DueDate` directly and the next-occurrence math falls out of that stored value rather than from a recomputation against `DueDate.Day` + today.
+
+Implementation: `Score()` in [backend/src/WhichToPay.Core/Ranking/RankingService.cs](../backend/src/WhichToPay.Core/Ranking/RankingService.cs), lines 50-52. The post-mark-paid `DueDate` advance lives in `BillsController.MarkPaid` and its `AdvanceOneMonth` helper in [backend/src/WhichToPay.Api/Controllers/BillsController.cs](../backend/src/WhichToPay.Api/Controllers/BillsController.cs).
 
 ## Scoring Pipeline (ASCII)
 

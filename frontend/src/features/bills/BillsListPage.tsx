@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogActions from "@mui/material/DialogActions";
 import Table from "@mui/material/Table";
 import TableHead from "@mui/material/TableHead";
 import TableBody from "@mui/material/TableBody";
@@ -67,6 +72,7 @@ export function BillsListPage() {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
+  const [billPendingDelete, setBillPendingDelete] = useState<Bill | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -116,6 +122,11 @@ export function BillsListPage() {
     },
     [dispatch],
   );
+  const handleConfirmDelete = useCallback(async () => {
+    if (!billPendingDelete) return;
+    await handleDelete(billPendingDelete.id);
+    setBillPendingDelete(null);
+  }, [billPendingDelete, handleDelete]);
 
   const columns = useMemo<ColumnDef<BillRow, unknown>[]>(() => {
     const ch = createColumnHelper<BillRow>();
@@ -200,7 +211,7 @@ export function BillsListPage() {
             </IconButton>
             <IconButton
               size="small"
-              onClick={() => handleDelete(row.original.id)}
+              onClick={() => setBillPendingDelete(row.original)}
               aria-label="Delete"
             >
               <DeleteIcon fontSize="small" />
@@ -209,7 +220,7 @@ export function BillsListPage() {
         ),
       }),
     ] as ColumnDef<BillRow, unknown>[];
-  }, [calcStatus, openEdit, handleDelete]);
+  }, [calcStatus, openEdit]);
 
   const table = useReactTable<BillRow>({
     data: tableData,
@@ -315,6 +326,32 @@ export function BillsListPage() {
         onClose={() => setDialogOpen(false)}
         onSubmit={handleSubmit}
       />
+      <Dialog
+        open={billPendingDelete !== null}
+        onClose={() => setBillPendingDelete(null)}
+        maxWidth="xs"
+        fullWidth
+        aria-labelledby="delete-bill-dialog-title"
+      >
+        <DialogTitle id="delete-bill-dialog-title">Delete bill?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete{" "}
+            <strong>{billPendingDelete?.name}</strong>? This action cannot be
+            undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBillPendingDelete(null)}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmDelete}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

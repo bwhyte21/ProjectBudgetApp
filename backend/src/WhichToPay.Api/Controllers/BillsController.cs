@@ -80,7 +80,22 @@ public sealed class BillsController : ControllerBase
 
         existing.LastPaidPeriod = dto.PaidPeriod;
         existing.LastPaidAt = DateTime.UtcNow;
+
+        if (dto.BalancePayment.HasValue && existing.TotalBalance.HasValue)
+        {
+            existing.TotalBalance = Math.Max(0m, existing.TotalBalance.Value - dto.BalancePayment.Value);
+        }
+
+        existing.DueDate = AdvanceOneMonth(dto.PaidPeriod, existing.DueDate.Day);
+
         _repo.Update(existing);
         return Ok(BillReadDto.From(existing));
+    }
+
+    private static DateOnly AdvanceOneMonth(DateOnly paidPeriod, int anchorDay)
+    {
+        var next = paidPeriod.AddMonths(1);
+        var daysInMonth = DateTime.DaysInMonth(next.Year, next.Month);
+        return new DateOnly(next.Year, next.Month, Math.Min(anchorDay, daysInMonth));
     }
 }

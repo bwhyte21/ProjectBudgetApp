@@ -34,8 +34,15 @@ export const deleteBill = createAsyncThunk(
 );
 export const markBillPaid = createAsyncThunk(
   "bills/markPaid",
-  ({ id, paidPeriod }: { id: string; paidPeriod: string }) =>
-    billsApi.markPaid(id, paidPeriod),
+  ({
+    id,
+    paidPeriod,
+    balancePayment,
+  }: {
+    id: string;
+    paidPeriod: string;
+    balancePayment?: number;
+  }) => billsApi.markPaid(id, paidPeriod, balancePayment),
 );
 
 const billsSlice = createSlice({

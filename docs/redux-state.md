@@ -17,8 +17,9 @@ The frontend has four kinds of shared state: bills (a list), income (a singleton
 
 - **State:** `{ items: Bill[]; status: 'idle' | 'loading' | 'error'; error?: string }`
 - **Thunks:** `fetchBills`, `createBill`, `updateBill`, `deleteBill`, `markBillPaid`
-- **Triggered by:** `BillsListPage` mount (fetches), `BillFormDialog` submit (creates or updates), the row delete button, the "Mark As Paid" action on a ranked bill row (`markBillPaid`).
-- **Side effect:** any successful mutation should also dispatch `fetchCalculation` so the ranked view stays in sync. The current code does this in `BillsListPage` after each thunk resolves.
+- **Triggered by:** `BillsListPage` mount (fetches), `BillFormDialog` submit (creates or updates), the row delete button (gated behind a confirm dialog). `markBillPaid` is dispatched from `RankedBillsView`: for bills with no tracked balance it fires immediately on click; for balance-carrying bills it fires after the user picks an amount in `MarkPaidBalanceDialog`.
+- **`markBillPaid` payload:** `{ id: string; paidPeriod: string; balancePayment?: number }`. When `balancePayment` is present, the API subtracts it from `TotalBalance` (floored at 0); when omitted, the balance is left as-is. Either way the server rolls `DueDate` forward one month.
+- **Side effect:** any successful mutation should also dispatch `fetchCalculation` so the ranked view stays in sync. `BillsListPage` does this after CRUD thunks resolve; `RankedBillsView` does it after `markBillPaid` resolves.
 - **Implementation:** [frontend/src/features/bills/billsSlice.ts](../frontend/src/features/bills/billsSlice.ts)
 
 ### 2. incomeSlice

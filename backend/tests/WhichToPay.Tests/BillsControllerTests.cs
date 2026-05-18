@@ -90,6 +90,37 @@ public class BillsControllerTests
     }
 
     [Fact]
+    public void MarkPaid_PreservesAnchorDay_AcrossShortMonths()
+    {
+        var repo = new FakeBillRepository();
+        var bill = new Bill
+        {
+            Name = "EndOfMonth",
+            MonthlyAmountOwed = 50m,
+            DueDate = new DateOnly(2026, 1, 31),
+            DueAnchorDay = 31,
+            Category = BillCategory.Utility
+        };
+        repo.Add(bill);
+        var controller = new BillsController(repo);
+
+        var first = controller.MarkPaid(bill.Id, new MarkPaidDto { PaidPeriod = new DateOnly(2026, 1, 31) });
+        var firstRead = ((OkObjectResult)first.Result!).Value.Should().BeOfType<BillReadDto>().Subject;
+        firstRead.DueDate.Should().Be(new DateOnly(2026, 2, 28));
+        firstRead.DueAnchorDay.Should().Be(31);
+
+        var second = controller.MarkPaid(bill.Id, new MarkPaidDto { PaidPeriod = new DateOnly(2026, 2, 28) });
+        var secondRead = ((OkObjectResult)second.Result!).Value.Should().BeOfType<BillReadDto>().Subject;
+        secondRead.DueDate.Should().Be(new DateOnly(2026, 3, 31));
+        secondRead.DueAnchorDay.Should().Be(31);
+
+        var third = controller.MarkPaid(bill.Id, new MarkPaidDto { PaidPeriod = new DateOnly(2026, 3, 31) });
+        var thirdRead = ((OkObjectResult)third.Result!).Value.Should().BeOfType<BillReadDto>().Subject;
+        thirdRead.DueDate.Should().Be(new DateOnly(2026, 4, 30));
+        thirdRead.DueAnchorDay.Should().Be(31);
+    }
+
+    [Fact]
     public void MarkPaid_WithBalancePaymentGreaterThanBalance_FloorsAtZero()
     {
         var (controller, _, bill) = Setup(totalBalance: 50m);

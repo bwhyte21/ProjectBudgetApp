@@ -9,6 +9,7 @@ public class BillReadDto
     public decimal MonthlyAmountOwed { get; set; }
     public decimal? TotalBalance { get; set; }
     public DateOnly DueDate { get; set; }
+    public int? DueAnchorDay { get; set; }
     public BillCategory Category { get; set; }
     public decimal? MinimumPayment { get; set; }
     public DateOnly? LastPaidPeriod { get; set; }
@@ -21,6 +22,7 @@ public class BillReadDto
         MonthlyAmountOwed = bill.MonthlyAmountOwed,
         TotalBalance = bill.TotalBalance,
         DueDate = bill.DueDate,
+        DueAnchorDay = bill.DueAnchorDay,
         Category = bill.Category,
         MinimumPayment = bill.MinimumPayment,
         LastPaidPeriod = bill.LastPaidPeriod,

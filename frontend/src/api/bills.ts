@@ -26,10 +26,18 @@ export const billsApi = {
     return fromBillWire(wire);
   },
   remove: (id: string): Promise<void> => http.del<void>(`/bills/${id}`),
-  markPaid: async (id: string, paidPeriod: string): Promise<Bill> => {
+  markPaid: async (
+    id: string,
+    paidPeriod: string,
+    balancePayment?: number,
+  ): Promise<Bill> => {
+    const body: { paidPeriod: string; balancePayment?: number } = {
+      paidPeriod,
+    };
+    if (balancePayment !== undefined) body.balancePayment = balancePayment;
     const wire = await http.post<Parameters<typeof fromBillWire>[0]>(
       `/bills/${id}/mark-paid`,
-      { paidPeriod },
+      body,
     );
     return fromBillWire(wire);
   },

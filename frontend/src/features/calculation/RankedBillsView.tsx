@@ -3,14 +3,23 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
+import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import InputAdornment from "@mui/material/InputAdornment";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import MenuItem from "@mui/material/MenuItem";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
+import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -45,7 +54,7 @@ interface BillSectionProps {
   limit: number;
   isExpanded: boolean;
   onToggleExpanded: () => void;
-  onMarkPaid: (id: string, paidPeriod: string) => void;
+  onMarkPaid: (bill: RankedBill) => void;
 }
 
 function BillSection({
@@ -163,7 +172,7 @@ function BillSection({
                           <CheckCircleOutlineOutlinedIcon fontSize="small" />
                         }
                         aria-label={`Mark ${b.name} paid`}
-                        onClick={() => onMarkPaid(b.id, b.nextDueDate)}
+                        onClick={() => onMarkPaid(b)}
                       >
                         {b.isOverdue || b.isDueToday
                           ? "Mark as Paid"
@@ -193,6 +202,112 @@ function BillSection({
   );
 }
 
+type MarkPaidChoice = "monthly" | "minimum" | "other";
+
+interface MarkPaidBalanceDialogProps {
+  bill: RankedBill;
+  onClose: () => void;
+  onConfirm: (balancePayment: number) => void;
+}
+
+function MarkPaidBalanceDialog({
+  bill,
+  onClose,
+  onConfirm,
+}: MarkPaidBalanceDialogProps) {
+  const hasMinimum = bill.minimumPayment != null;
+  const [choice, setChoice] = useState<MarkPaidChoice>(
+    hasMinimum ? "minimum" : "monthly",
+  );
+  const [otherAmount, setOtherAmount] = useState<string>("");
+
+  const otherValue = Number(otherAmount);
+  const otherValid =
+    otherAmount !== "" && Number.isFinite(otherValue) && otherValue >= 0;
+  const confirmDisabled = choice === "other" && !otherValid;
+
+  const handleConfirm = () => {
+    let amount: number;
+    if (choice === "monthly") amount = bill.monthlyAmountOwed;
+    else if (choice === "minimum")
+      amount = bill.minimumPayment ?? bill.monthlyAmountOwed;
+    else amount = otherValue;
+    onConfirm(amount);
+  };
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Mark {bill.name} as paid</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Current balance: {formatCurrency(bill.totalBalance ?? 0)}
+          </Typography>
+          <FormControl>
+            <RadioGroup
+              value={choice}
+              onChange={(e) => setChoice(e.target.value as MarkPaidChoice)}
+            >
+              <FormControlLabel
+                value="monthly"
+                control={<Radio />}
+                label={`Monthly (${formatCurrency(bill.monthlyAmountOwed)})`}
+              />
+              {hasMinimum && (
+                <FormControlLabel
+                  value="minimum"
+                  control={<Radio />}
+                  label={`Minimum (${formatCurrency(bill.minimumPayment as number)})`}
+                />
+              )}
+              <FormControlLabel
+                value="other"
+                control={<Radio />}
+                label="Other"
+              />
+            </RadioGroup>
+          </FormControl>
+          {choice === "other" && (
+            <TextField
+              autoFocus
+              size="small"
+              type="number"
+              label="Amount paid"
+              value={otherAmount}
+              onChange={(e) => setOtherAmount(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                },
+                htmlInput: { min: 0, step: "0.01" },
+              }}
+              error={otherAmount !== "" && !otherValid}
+              helperText={
+                otherAmount !== "" && !otherValid
+                  ? "Enter a non-negative number"
+                  : " "
+              }
+            />
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={handleConfirm}
+          disabled={confirmDisabled}
+        >
+          Confirm
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export function RankedBillsView() {
   const dispatch = useAppDispatch();
   const result = useAppSelector((s) => s.calculation.result);
@@ -201,6 +316,9 @@ export function RankedBillsView() {
   const [hidePaid, setHidePaid] = useState(false);
   const [sectionLimit, setSectionLimit] = useState(10);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [balanceDialogBill, setBalanceDialogBill] = useState<RankedBill | null>(
+    null,
+  );
   const toggleExpanded = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -208,9 +326,28 @@ export function RankedBillsView() {
     dispatch(fetchCalculation());
   }, [dispatch]);
 
-  const handleMarkPaid = async (id: string, paidPeriod: string) => {
-    await dispatch(markBillPaid({ id, paidPeriod })).unwrap();
+  const runMarkPaid = async (
+    id: string,
+    paidPeriod: string,
+    balancePayment?: number,
+  ) => {
+    await dispatch(markBillPaid({ id, paidPeriod, balancePayment })).unwrap();
     dispatch(fetchCalculation());
+  };
+
+  const handleMarkPaid = (bill: RankedBill) => {
+    if (bill.totalBalance != null) {
+      setBalanceDialogBill(bill);
+      return;
+    }
+    void runMarkPaid(bill.id, bill.nextDueDate);
+  };
+
+  const handleBalanceDialogConfirm = (balancePayment: number) => {
+    if (!balanceDialogBill) return;
+    const bill = balanceDialogBill;
+    setBalanceDialogBill(null);
+    void runMarkPaid(bill.id, bill.nextDueDate, balancePayment);
   };
 
   const today = new Date();
@@ -240,105 +377,119 @@ export function RankedBillsView() {
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Pay these first"
-        action={
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={hidePaid}
-                  onChange={(e) => setHidePaid(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={<Typography variant="caption">Hide paid</Typography>}
-              sx={{ mr: 0, whiteSpace: "nowrap" }}
-            />
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-              <Typography variant="caption" sx={{ whiteSpace: "nowrap" }}>
-                Per section
-              </Typography>
-              <Select
-                size="small"
-                value={sectionLimit}
-                onChange={(e) => setSectionLimit(Number(e.target.value))}
-                sx={{ minWidth: 72 }}
+    <>
+      {balanceDialogBill && (
+        <MarkPaidBalanceDialog
+          key={balanceDialogBill.id}
+          bill={balanceDialogBill}
+          onClose={() => setBalanceDialogBill(null)}
+          onConfirm={handleBalanceDialogConfirm}
+        />
+      )}
+      <Card>
+        <CardHeader
+          title="Pay these first"
+          action={
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={hidePaid}
+                    onChange={(e) => setHidePaid(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={<Typography variant="caption">Hide paid</Typography>}
+                sx={{ mr: 0, whiteSpace: "nowrap" }}
+              />
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{ alignItems: "center" }}
               >
-                {[10, 25, 50].map((n) => (
-                  <MenuItem key={n} value={n}>
-                    {n}
-                  </MenuItem>
-                ))}
-              </Select>
+                <Typography variant="caption" sx={{ whiteSpace: "nowrap" }}>
+                  Per section
+                </Typography>
+                <Select
+                  size="small"
+                  value={sectionLimit}
+                  onChange={(e) => setSectionLimit(Number(e.target.value))}
+                  sx={{ minWidth: 72 }}
+                >
+                  {[10, 25, 50].map((n) => (
+                    <MenuItem key={n} value={n}>
+                      {n}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Stack>
+              <Button
+                onClick={() => dispatch(fetchCalculation())}
+                disabled={status === "loading"}
+              >
+                Recalculate
+              </Button>
             </Stack>
-            <Button
-              onClick={() => dispatch(fetchCalculation())}
-              disabled={status === "loading"}
-            >
-              Recalculate
-            </Button>
-          </Stack>
-        }
-      />
-      <CardContent>
-        {!result || allBills.length === 0 ? (
-          <Typography color="text.secondary">
-            Add some bills and your income to see prioritized recommendations.
-          </Typography>
-        ) : (
-          <Stack spacing={2}>
-            {overdueBills.length > 0 && (
-              <>
-                <BillSection
-                  title="Overdue"
-                  titleSx={{ color: "error.main" }}
-                  bills={overdueBills}
-                  rankMap={rankMap}
-                  hidePaid={hidePaid}
-                  limit={sectionLimit}
-                  isExpanded={!!expanded["Overdue"]}
-                  onToggleExpanded={() => toggleExpanded("Overdue")}
-                  onMarkPaid={handleMarkPaid}
-                />
-                <Divider />
-              </>
-            )}
-            {windows.map((w, i) => (
-              <Fragment key={w.label}>
-                {i > 0 && <Divider />}
-                <BillSection
-                  title={w.label}
-                  bills={periodBills[i]}
-                  rankMap={rankMap}
-                  hidePaid={hidePaid}
-                  limit={sectionLimit}
-                  isExpanded={!!expanded[w.label]}
-                  onToggleExpanded={() => toggleExpanded(w.label)}
-                  onMarkPaid={handleMarkPaid}
-                />
-              </Fragment>
-            ))}
-            {laterBills.length > 0 && (
-              <>
-                <Divider />
-                <BillSection
-                  title="Later"
-                  bills={laterBills}
-                  rankMap={rankMap}
-                  hidePaid={hidePaid}
-                  showMarkPaid={false}
-                  limit={sectionLimit}
-                  isExpanded={!!expanded["Later"]}
-                  onToggleExpanded={() => toggleExpanded("Later")}
-                  onMarkPaid={handleMarkPaid}
-                />
-              </>
-            )}
-          </Stack>
-        )}
-      </CardContent>
-    </Card>
+          }
+        />
+        <CardContent>
+          {!result || allBills.length === 0 ? (
+            <Typography color="text.secondary">
+              Add some bills and your income to see prioritized recommendations.
+            </Typography>
+          ) : (
+            <Stack spacing={2}>
+              {overdueBills.length > 0 && (
+                <>
+                  <BillSection
+                    title="Overdue"
+                    titleSx={{ color: "error.main" }}
+                    bills={overdueBills}
+                    rankMap={rankMap}
+                    hidePaid={hidePaid}
+                    limit={sectionLimit}
+                    isExpanded={!!expanded["Overdue"]}
+                    onToggleExpanded={() => toggleExpanded("Overdue")}
+                    onMarkPaid={handleMarkPaid}
+                  />
+                  <Divider />
+                </>
+              )}
+              {windows.map((w, i) => (
+                <Fragment key={w.label}>
+                  {i > 0 && <Divider />}
+                  <BillSection
+                    title={w.label}
+                    bills={periodBills[i]}
+                    rankMap={rankMap}
+                    hidePaid={hidePaid}
+                    limit={sectionLimit}
+                    isExpanded={!!expanded[w.label]}
+                    onToggleExpanded={() => toggleExpanded(w.label)}
+                    onMarkPaid={handleMarkPaid}
+                  />
+                </Fragment>
+              ))}
+              {laterBills.length > 0 && (
+                <>
+                  <Divider />
+                  <BillSection
+                    title="Later"
+                    bills={laterBills}
+                    rankMap={rankMap}
+                    hidePaid={hidePaid}
+                    showMarkPaid={false}
+                    limit={sectionLimit}
+                    isExpanded={!!expanded["Later"]}
+                    onToggleExpanded={() => toggleExpanded("Later")}
+                    onMarkPaid={handleMarkPaid}
+                  />
+                </>
+              )}
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }

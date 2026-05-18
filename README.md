@@ -11,8 +11,9 @@ A local-only bill-prioritization web app. Enter your bills and take-home pay, an
 ## Features
 
 - **Bill ranking** - multi-factor weighted score (urgency, balance, category) surfaces which bill to pay first. Bills due today are flagged and always appear at the top of the ranked list.
-- **Mark As Paid (Early)** - mark a bill paid before its due date; the app advances the due date to the next billing cycle so it re-appears at the right time.
+- **Mark As Paid** - mark a bill paid for the current cycle; the API records the paid period and rolls `DueDate` forward one month (anchored to the original due day, clamped for short months). For bills with a tracked balance, a dialog prompts for the amount paid - Monthly, Minimum, or Other - and the API subtracts it from `TotalBalance` (floored at 0).
 - **Pay-anchor date** - enter a payday anchor date alongside your pay frequency (weekly, biweekly, semimonthly, monthly) so the app shows a paycheck-aware pay-period leftover summary.
+- **Delete confirmation** - removing a bill requires confirming in a dialog, so a stray click on the trash icon will not wipe a row.
 - **Local-only storage** - all data lives in a single LiteDB file on your machine. No accounts, no cloud sync.
 
 ## Project Layout
@@ -62,7 +63,7 @@ cd backend
 dotnet test
 ```
 
-Runs the xUnit tests for the ranking service and repository. Expect 27 green tests.
+Runs the xUnit tests for the ranking service, the LiteDB repository, and the bills controller.
 
 ## Inspect / Access LiteDB
 

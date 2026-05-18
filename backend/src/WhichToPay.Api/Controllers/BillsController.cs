@@ -37,6 +37,7 @@ public sealed class BillsController : ControllerBase
             MonthlyAmountOwed = dto.MonthlyAmountOwed,
             TotalBalance = dto.TotalBalance,
             DueDate = dto.DueDate,
+            DueAnchorDay = dto.DueDate.Day,
             Category = dto.Category,
             MinimumPayment = dto.MinimumPayment
         };
@@ -56,6 +57,10 @@ public sealed class BillsController : ControllerBase
         existing.Name = dto.Name.Trim();
         existing.MonthlyAmountOwed = dto.MonthlyAmountOwed;
         existing.TotalBalance = dto.TotalBalance;
+        if (existing.DueDate != dto.DueDate)
+        {
+            existing.DueAnchorDay = dto.DueDate.Day;
+        }
         existing.DueDate = dto.DueDate;
         existing.Category = dto.Category;
         existing.MinimumPayment = dto.MinimumPayment;
@@ -80,7 +85,24 @@ public sealed class BillsController : ControllerBase
 
         existing.LastPaidPeriod = dto.PaidPeriod;
         existing.LastPaidAt = DateTime.UtcNow;
+
+        if (dto.BalancePayment.HasValue && existing.TotalBalance.HasValue)
+        {
+            existing.TotalBalance = Math.Max(0m, existing.TotalBalance.Value - dto.BalancePayment.Value);
+        }
+
+        var anchorDay = existing.DueAnchorDay ?? existing.DueDate.Day;
+        existing.DueAnchorDay = anchorDay;
+        existing.DueDate = AdvanceOneMonth(dto.PaidPeriod, anchorDay);
+
         _repo.Update(existing);
         return Ok(BillReadDto.From(existing));
+    }
+
+    private static DateOnly AdvanceOneMonth(DateOnly paidPeriod, int anchorDay)
+    {
+        var next = paidPeriod.AddMonths(1);
+        var daysInMonth = DateTime.DaysInMonth(next.Year, next.Month);
+        return new DateOnly(next.Year, next.Month, Math.Min(anchorDay, daysInMonth));
     }
 }

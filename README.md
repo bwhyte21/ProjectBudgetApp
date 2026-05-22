@@ -3,14 +3,22 @@
 A local-only bill-prioritization web app. Enter your bills and take-home pay, and the app ranks which bills to pay first using a multi-factor weighted score so you avoid late fees and have money left to spend or save.
 
 - **Backend:** .NET 10 Web API + LiteDB (embedded, file-based)
-- **Frontend:** React + TypeScript + Vite + Redux Toolkit + MUI
+- **Frontend:** React + TypeScript + Vite + Redux Toolkit + shadcn/ui + Tailwind CSS
 - **Storage:** local LiteDB file. No cloud, no accounts, no auth.
 
-**Bi-Weekly Summary View**
-![mainScreen-biweekly](https://github.com/user-attachments/assets/302d46fc-d1a2-4a76-9218-ff5250ab7b02)
 
 **Monthly Summary View**
-![mainScreen-monthly](https://github.com/user-attachments/assets/8de21324-e39a-4e9d-b741-0b87b374b1d5)
+
+![mainScreen-monthly_new](https://github.com/user-attachments/assets/947e9a21-db81-40a6-85f2-4b67c5cb8dd3)
+
+**Bi-Weekly Summary View**
+
+![mainScreen-biweekly_new](https://github.com/user-attachments/assets/402a3f74-bd9d-4eaf-bd93-e53bfff57983)
+
+**Edit Bills, Add Notes, or Delete Bills!**
+
+![mainScreen-abilities](https://github.com/user-attachments/assets/3681a6c5-9518-4c73-a682-fbc97f6f04f4)
+![BillNotesModal_new](https://github.com/user-attachments/assets/9393708b-f695-4d5e-b978-f5b9b4bb0dae)
 
 
 ## Features

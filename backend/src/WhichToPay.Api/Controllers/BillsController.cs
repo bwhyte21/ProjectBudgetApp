@@ -31,6 +31,9 @@ public sealed class BillsController : ControllerBase
         var (ok, reason) = InputSanitizer.Check(dto.Name);
         if (!ok) return BadRequest(new { error = reason });
 
+        var (noteOk, noteReason) = InputSanitizer.Check(dto.Note);
+        if (!noteOk) return BadRequest(new { error = noteReason });
+
         var bill = new Bill
         {
             Name = dto.Name.Trim(),
@@ -39,7 +42,8 @@ public sealed class BillsController : ControllerBase
             DueDate = dto.DueDate,
             DueAnchorDay = dto.DueDate.Day,
             Category = dto.Category,
-            MinimumPayment = dto.MinimumPayment
+            MinimumPayment = dto.MinimumPayment,
+            Note = NormalizeNote(dto.Note)
         };
         _repo.Add(bill);
         return CreatedAtAction(nameof(GetById), new { id = bill.Id }, BillReadDto.From(bill));
@@ -50,6 +54,9 @@ public sealed class BillsController : ControllerBase
     {
         var (ok, reason) = InputSanitizer.Check(dto.Name);
         if (!ok) return BadRequest(new { error = reason });
+
+        var (noteOk, noteReason) = InputSanitizer.Check(dto.Note);
+        if (!noteOk) return BadRequest(new { error = noteReason });
 
         var existing = _repo.GetById(id);
         if (existing is null) return NotFound();
@@ -64,6 +71,7 @@ public sealed class BillsController : ControllerBase
         existing.DueDate = dto.DueDate;
         existing.Category = dto.Category;
         existing.MinimumPayment = dto.MinimumPayment;
+        existing.Note = NormalizeNote(dto.Note);
 
         _repo.Update(existing);
         return Ok(BillReadDto.From(existing));
@@ -97,6 +105,12 @@ public sealed class BillsController : ControllerBase
 
         _repo.Update(existing);
         return Ok(BillReadDto.From(existing));
+    }
+
+    private static string? NormalizeNote(string? note)
+    {
+        var trimmed = note?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     private static DateOnly AdvanceOneMonth(DateOnly paidPeriod, int anchorDay)

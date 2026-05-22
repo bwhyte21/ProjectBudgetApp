@@ -76,6 +76,7 @@ export function BillFormDialog({ open, initial, onClose, onSubmit }: Props) {
       dueDate: format(values.dueDate, "yyyy-MM-dd"),
       category: values.category as BillCategory,
       minimumPayment: values.minimumPayment ?? null,
+      note: initial?.note ?? null,
     });
     onClose();
   };

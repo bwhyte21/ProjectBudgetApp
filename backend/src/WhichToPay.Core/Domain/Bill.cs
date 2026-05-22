@@ -12,4 +12,5 @@ public sealed class Bill
     public decimal? MinimumPayment { get; set; }
     public DateOnly? LastPaidPeriod { get; set; }
     public DateTime? LastPaidAt { get; set; }
+    public string? Note { get; set; }
 }

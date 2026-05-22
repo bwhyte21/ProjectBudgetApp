@@ -14,6 +14,7 @@ public class BillReadDto
     public decimal? MinimumPayment { get; set; }
     public DateOnly? LastPaidPeriod { get; set; }
     public DateTime? LastPaidAt { get; set; }
+    public string? Note { get; set; }
 
     public static BillReadDto From(Bill bill) => new()
     {
@@ -26,6 +27,7 @@ public class BillReadDto
         Category = bill.Category,
         MinimumPayment = bill.MinimumPayment,
         LastPaidPeriod = bill.LastPaidPeriod,
-        LastPaidAt = bill.LastPaidAt
+        LastPaidAt = bill.LastPaidAt,
+        Note = bill.Note
     };
 }

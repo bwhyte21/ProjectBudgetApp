@@ -1,10 +1,15 @@
 import { useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import type { Bill, BillInput } from "../../api/types";
 
 const MAX_NOTE_LENGTH = 500;
@@ -41,29 +46,37 @@ export function BillNoteDialog({ open, bill, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Note for "{bill?.name}"</DialogTitle>
-      <DialogContent>
-        <TextField
-          label="Note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          multiline
-          minRows={3}
-          maxRows={8}
-          autoFocus
-          fullWidth
-          margin="dense"
-          slotProps={{ htmlInput: { maxLength: MAX_NOTE_LENGTH } }}
-          helperText={`${note.length}/${MAX_NOTE_LENGTH}`}
-        />
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Note for "{bill?.name}"</DialogTitle>
+          <DialogDescription className="sr-only">
+            Add or edit a note for this bill.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bill-note">Note</Label>
+          <Textarea
+            id="bill-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            autoFocus
+            maxLength={MAX_NOTE_LENGTH}
+          />
+          <p className="text-sm text-muted-foreground">
+            {note.length}/{MAX_NOTE_LENGTH}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={submitting}>
+            Save
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={submit} variant="contained" disabled={submitting}>
-          Save
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }

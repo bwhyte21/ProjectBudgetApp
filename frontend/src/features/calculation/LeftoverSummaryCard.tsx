@@ -1,20 +1,23 @@
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
-import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
-import Divider from "@mui/material/Divider";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Typography from "@mui/material/Typography";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Fragment, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
   billInWindow,
   countPaychecksInMonth,
@@ -55,99 +58,84 @@ function PayPeriodBlock({
   const [expanded, setExpanded] = useState(false);
   const billsTotal = bills.reduce((sum, b) => sum + b.monthlyAmountOwed, 0);
   const leftover = takeHome - billsTotal;
-  const leftoverColor = leftover < 0 ? "error.main" : "success.main";
+  const leftoverColor =
+    leftover < 0 ? "text-destructive" : "text-green-600 dark:text-green-400";
 
   return (
-    <Stack spacing={1}>
-      <Typography variant="subtitle2" color="text.secondary">
-        {label}
-      </Typography>
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
       <Row label={takeHomeLabel} value={formatCurrency(takeHome)} />
-      <Stack
-        direction="row"
-        sx={{ justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Typography color="text.secondary">Bills due this period</Typography>
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-          <Typography>{formatCurrency(billsTotal)}</Typography>
-          <IconButton
-            size="small"
-            onClick={() => setExpanded((p) => !p)}
-            aria-label="toggle bill breakdown"
-          >
-            {expanded ? (
-              <ExpandLessIcon fontSize="small" />
-            ) : (
-              <ExpandMoreIcon fontSize="small" />
-            )}
-          </IconButton>
-        </Stack>
-      </Stack>
-      <Collapse in={expanded}>
-        <Stack spacing={0.5} sx={{ pl: 1, pb: 0.5 }}>
-          {bills.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No bills due this period.
-            </Typography>
-          ) : (
-            bills.map((b) => (
-              <Stack
-                key={b.id}
-                direction="row"
-                sx={{ justifyContent: "space-between", alignItems: "center" }}
+      <Collapsible open={expanded} onOpenChange={setExpanded}>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Bills due this period</span>
+          <div className="flex items-center gap-0.5">
+            <span>{formatCurrency(billsTotal)}</span>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label="toggle bill breakdown"
               >
-                <Stack
-                  direction="row"
-                  spacing={0.75}
-                  sx={{ alignItems: "center" }}
-                >
-                  <Typography variant="body2">{b.name}</Typography>
-                  {!excludePaid && b.isPaidCurrentCycle && (
-                    <Chip
-                      label="Paid this cycle"
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                      sx={{ height: 18, fontSize: "0.65rem" }}
-                    />
-                  )}
-                </Stack>
-                <Typography variant="body2">
-                  {formatCurrency(b.monthlyAmountOwed)}
-                </Typography>
-              </Stack>
-            ))
-          )}
-        </Stack>
-      </Collapse>
-      <Stack
-        direction="row"
-        sx={{
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          pt: 0.5,
-        }}
-      >
-        <Typography variant="h6">Leftover</Typography>
-        <Typography variant="h5" sx={{ color: leftoverColor, fontWeight: 600 }}>
+                {expanded ? (
+                  <ChevronUp className="size-4" />
+                ) : (
+                  <ChevronDown className="size-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+        </div>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-1 pb-1 pl-1 pt-1">
+            {bills.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No bills due this period.
+              </p>
+            ) : (
+              bills.map((b) => (
+                <div key={b.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">{b.name}</span>
+                    {!excludePaid && b.isPaidCurrentCycle && (
+                      <Badge
+                        variant="outline"
+                        className="border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300"
+                      >
+                        Paid this cycle
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-sm">
+                    {formatCurrency(b.monthlyAmountOwed)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+      <div className="flex items-baseline justify-between pt-0.5">
+        <span className="text-lg font-semibold">Leftover</span>
+        <span className={cn("text-xl font-semibold", leftoverColor)}>
           {formatCurrency(leftover)}
-        </Typography>
-      </Stack>
+        </span>
+      </div>
       {leftover < 0 && (
-        <Typography variant="body2" color="error.main">
+        <p className="text-sm text-destructive">
           Bills exceed your take-home for this period.
-        </Typography>
+        </p>
       )}
-    </Stack>
+    </div>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-      <Typography color="text.secondary">{label}</Typography>
-      <Typography>{value}</Typography>
-    </Stack>
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span>{value}</span>
+    </div>
   );
 }
 
@@ -158,27 +146,29 @@ export function LeftoverSummaryCard() {
   const [excludePaid, setExcludePaid] = useState(false);
 
   const toggle = (
-    <ToggleButtonGroup
+    <ToggleGroup
+      type="single"
       value={mode}
-      exclusive
-      onChange={(_: React.MouseEvent, v: ViewMode | null) => {
-        if (v) setMode(v);
-      }}
-      size="small"
+      onValueChange={(v) => v && setMode(v as ViewMode)}
+      variant="outline"
+      size="sm"
     >
-      <ToggleButton value="monthly">Monthly</ToggleButton>
-      <ToggleButton value="biweekly">Bi-weekly</ToggleButton>
-    </ToggleButtonGroup>
+      <ToggleGroupItem value="monthly">Monthly</ToggleGroupItem>
+      <ToggleGroupItem value="biweekly">Bi-weekly</ToggleGroupItem>
+    </ToggleGroup>
   );
 
   if (!result) {
     return (
       <Card>
-        <CardHeader title="Monthly summary" action={toggle} />
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <CardTitle>Monthly summary</CardTitle>
+          {toggle}
+        </CardHeader>
         <CardContent>
-          <Typography color="text.secondary">
+          <p className="text-muted-foreground">
             Set income and add bills to see your summary.
-          </Typography>
+          </p>
         </CardContent>
       </Card>
     );
@@ -202,17 +192,22 @@ export function LeftoverSummaryCard() {
       : allWindows;
   const perPaycheck = income?.perPaycheckAmount ?? 0;
 
-  const leftoverColor = result.leftover < 0 ? "error.main" : "success.main";
+  const leftoverColor =
+    result.leftover < 0
+      ? "text-destructive"
+      : "text-green-600 dark:text-green-400";
 
   return (
     <Card>
-      <CardHeader
-        title={mode === "monthly" ? "Monthly summary" : "Bi-weekly summary"}
-        action={toggle}
-      />
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle>
+          {mode === "monthly" ? "Monthly summary" : "Bi-weekly summary"}
+        </CardTitle>
+        {toggle}
+      </CardHeader>
       <CardContent>
         {mode === "monthly" ? (
-          <Stack spacing={1}>
+          <div className="flex flex-col gap-2">
             <Row
               label="Monthly take-home"
               value={formatCurrency(result.monthlyTakeHome)}
@@ -221,61 +216,50 @@ export function LeftoverSummaryCard() {
               label="Total monthly owed"
               value={formatCurrency(result.totalMonthlyOwed)}
             />
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                pt: 1,
-              }}
-            >
-              <Typography variant="h6">Leftover</Typography>
-              <Typography
-                variant="h5"
-                sx={{ color: leftoverColor, fontWeight: 600 }}
-              >
+            <div className="flex items-baseline justify-between pt-1">
+              <span className="text-lg font-semibold">Leftover</span>
+              <span className={cn("text-xl font-semibold", leftoverColor)}>
                 {formatCurrency(result.leftover)}
-              </Typography>
-            </Stack>
+              </span>
+            </div>
             {result.leftover < 0 && (
-              <Typography variant="body2" color="error.main">
+              <p className="text-sm text-destructive">
                 Bills exceed your take-home pay this month.
-              </Typography>
+              </p>
             )}
-          </Stack>
+          </div>
         ) : (
-          <Stack spacing={2}>
-            <Stack
-              direction="row"
-              sx={{ justifyContent: "space-between", alignItems: "center" }}
-            >
-              <Typography variant="caption" color="text.secondary">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
                 Each period is calculated independently &mdash; leftover does
                 not carry over to the next period.
-              </Typography>
-              <Tooltip
-                title="Hide bills already marked as paid from the pay period breakdown"
-                placement="top"
-                arrow
-              >
-                <FormControlLabel
-                  control={
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 whitespace-nowrap">
                     <Switch
+                      id="exclude-paid"
                       checked={excludePaid}
-                      onChange={(e) => setExcludePaid(e.target.checked)}
-                      size="small"
+                      onCheckedChange={setExcludePaid}
                     />
-                  }
-                  label={
-                    <Typography variant="caption">Exclude paid</Typography>
-                  }
-                  sx={{ ml: 1, whiteSpace: "nowrap" }}
-                />
+                    <Label
+                      htmlFor="exclude-paid"
+                      className="text-xs font-normal"
+                    >
+                      Exclude paid
+                    </Label>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Hide bills already marked as paid from the pay period
+                  breakdown
+                </TooltipContent>
               </Tooltip>
-            </Stack>
+            </div>
             {windows.map((w, i) => (
               <Fragment key={w.label}>
-                {i > 0 && <Divider />}
+                {i > 0 && <Separator />}
                 <PayPeriodBlock
                   label={w.label}
                   takeHomeLabel={PER_PAYCHECK_LABEL[frequency]}
@@ -289,7 +273,7 @@ export function LeftoverSummaryCard() {
                 />
               </Fragment>
             ))}
-          </Stack>
+          </div>
         )}
       </CardContent>
     </Card>

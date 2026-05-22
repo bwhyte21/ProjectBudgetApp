@@ -1,15 +1,32 @@
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { CalendarIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import {
   billSchema,
@@ -82,125 +99,199 @@ export function BillFormDialog({ open, initial, onClose, onSubmit }: Props) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{initial ? "Edit bill" : "Add bill"}</DialogTitle>
-      <form onSubmit={handleSubmit(submit)}>
-        <DialogContent>
-          <Stack spacing={2}>
-            <Controller
-              control={control}
-              name="name"
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Bill name"
-                  error={!!errors.name}
-                  helperText={errors.name?.message}
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{initial ? "Edit bill" : "Add bill"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {initial
+              ? "Edit the details of this bill."
+              : "Enter the details for a new bill."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(submit)} className="flex flex-col gap-4">
+          <Controller
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="bill-name">Bill name</Label>
+                <Input
+                  id="bill-name"
                   autoFocus
+                  ref={field.ref}
+                  name={field.name}
+                  value={field.value ?? ""}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  aria-invalid={!!errors.name}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="monthlyAmountOwed"
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Monthly amount owed"
+                {errors.name && (
+                  <p className="text-sm text-destructive">
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="monthlyAmountOwed"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="monthlyAmountOwed">Monthly amount owed</Label>
+                <Input
+                  id="monthlyAmountOwed"
                   type="number"
-                  slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+                  step="0.01"
+                  min={0}
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  value={field.value ?? ""}
                   onChange={(e) => {
                     const v = e.target.value;
                     field.onChange(v === "" ? null : parseFloat(v));
                   }}
-                  value={field.value ?? ""}
-                  error={!!errors.monthlyAmountOwed}
-                  helperText={errors.monthlyAmountOwed?.message}
+                  aria-invalid={!!errors.monthlyAmountOwed}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="totalBalance"
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Total balance (optional, for loans / credit cards)"
+                {errors.monthlyAmountOwed && (
+                  <p className="text-sm text-destructive">
+                    {errors.monthlyAmountOwed.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="totalBalance"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="totalBalance">
+                  Total balance (optional, for loans / credit cards)
+                </Label>
+                <Input
+                  id="totalBalance"
                   type="number"
-                  slotProps={{ htmlInput: { step: "0.01" } }}
+                  step="0.01"
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  value={field.value ?? ""}
                   onChange={(e) => {
                     const v = e.target.value;
                     field.onChange(v === "" ? null : parseFloat(v));
                   }}
-                  value={field.value ?? ""}
-                  error={!!errors.totalBalance}
-                  helperText={errors.totalBalance?.message}
+                  aria-invalid={!!errors.totalBalance}
                 />
-              )}
-            />
-            <Controller
-              control={control}
-              name="dueDate"
-              render={({ field }) => (
-                <DatePicker
-                  label="Due date"
-                  value={field.value}
-                  onChange={(d) => field.onChange(d)}
-                  slotProps={{
-                    textField: {
-                      error: !!errors.dueDate,
-                      helperText: errors.dueDate?.message,
-                    },
-                  }}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="category"
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Category"
-                  select
-                  error={!!errors.category}
-                >
-                  {BILL_CATEGORIES.map((c) => (
-                    <MenuItem key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
-            />
-            <Controller
-              control={control}
-              name="minimumPayment"
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Minimum payment (optional)"
+                {errors.totalBalance && (
+                  <p className="text-sm text-destructive">
+                    {errors.totalBalance.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="dueDate"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label>Due date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-invalid={!!errors.dueDate}
+                      className={cn(
+                        "justify-start text-left font-normal",
+                        !field.value && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 size-4" />
+                      {field.value ? format(field.value, "PP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ?? undefined}
+                      onSelect={(d) => field.onChange(d ?? null)}
+                      autoFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {errors.dueDate && (
+                  <p className="text-sm text-destructive">
+                    {errors.dueDate.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="category">Category</Label>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="category" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BILL_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {CATEGORY_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="minimumPayment"
+            render={({ field }) => (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="minimumPayment">
+                  Minimum payment (optional)
+                </Label>
+                <Input
+                  id="minimumPayment"
                   type="number"
-                  slotProps={{ htmlInput: { step: "0.01" } }}
+                  step="0.01"
+                  ref={field.ref}
+                  name={field.name}
+                  onBlur={field.onBlur}
+                  value={field.value ?? ""}
                   onChange={(e) => {
                     const v = e.target.value;
                     field.onChange(v === "" ? null : parseFloat(v));
                   }}
-                  value={field.value ?? ""}
-                  error={!!errors.minimumPayment}
-                  helperText={errors.minimumPayment?.message}
+                  aria-invalid={!!errors.minimumPayment}
                 />
-              )}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {initial ? "Save" : "Add"}
-          </Button>
-        </DialogActions>
-      </form>
+                {errors.minimumPayment && (
+                  <p className="text-sm text-destructive">
+                    {errors.minimumPayment.message}
+                  </p>
+                )}
+              </div>
+            )}
+          />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {initial ? "Save" : "Add"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 }

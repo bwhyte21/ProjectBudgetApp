@@ -1,3 +1,8 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 html,
 body,
 #root {
@@ -7,5 +12,96 @@ body,
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Brand palette - light */
+  --background: #f3e3d0;
+  --foreground: #2a2a2a;
+  --card: #ffffff;
+  --card-foreground: #2a2a2a;
+  --popover: #ffffff;
+  --popover-foreground: #2a2a2a;
+  --primary: #81a6c6;
+  --primary-foreground: #1b2733;
+  --secondary: #aacddc;
+  --secondary-foreground: #1b2733;
+  --muted: #ece0d0;
+  --muted-foreground: #5a5a5a;
+  --accent: #aacddc;
+  --accent-foreground: #1b2733;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --border: #d8c4ad;
+  --input: #d8c4ad;
+  --ring: #81a6c6;
+}
+
+.dark {
+  /* Brand palette - dark */
+  --background: #1b3c53;
+  --foreground: #d2c1b6;
+  --card: #234c6a;
+  --card-foreground: #d2c1b6;
+  --popover: #234c6a;
+  --popover-foreground: #d2c1b6;
+  --primary: #456882;
+  --primary-foreground: #d2c1b6;
+  --secondary: #234c6a;
+  --secondary-foreground: #d2c1b6;
+  --muted: #234c6a;
+  --muted-foreground: #b3a294;
+  --accent: #2f5b78;
+  --accent-foreground: #d2c1b6;
+  --destructive: #e06c5a;
+  --destructive-foreground: #1b1b1b;
+  --border: #345a73;
+  --input: #345a73;
+  --ring: #456882;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 }

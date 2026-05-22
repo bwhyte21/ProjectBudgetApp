@@ -22,4 +22,7 @@ public sealed class BillCreateDto
 
     [Range(0, 1_000_000)]
     public decimal? MinimumPayment { get; set; }
+
+    [StringLength(500)]
+    public string? Note { get; set; }
 }

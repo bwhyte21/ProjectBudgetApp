@@ -1,11 +1,4 @@
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import { BillsListPage } from "../features/bills/BillsListPage";
 import { IncomeForm } from "../features/income/IncomeForm";
@@ -14,35 +7,29 @@ import { LeftoverSummaryCard } from "../features/calculation/LeftoverSummaryCard
 
 export function App() {
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-        <AppBar position="static" color="primary" enableColorOnDark>
-          <Toolbar>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="bg-primary text-primary-foreground shadow-sm">
+          <div className="mx-auto flex max-w-screen-xl items-center gap-4 px-4 py-3">
+            <h1 className="flex-1 text-lg font-semibold">
               Which To Pay - A Personal Budget App
-            </Typography>
+            </h1>
             <ThemeToggle />
-          </Toolbar>
-        </AppBar>
-        <Container maxWidth="xl" sx={{ py: 3 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-            }}
-          >
-            <Stack spacing={2}>
+          </div>
+        </header>
+        <main className="mx-auto max-w-screen-2xl px-4 py-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-4">
               <IncomeForm />
               <BillsListPage />
-            </Stack>
-            <Stack spacing={2}>
+            </div>
+            <div className="flex flex-col gap-4">
               <LeftoverSummaryCard />
               <RankedBillsView />
-            </Stack>
-          </Box>
-        </Container>
-      </Box>
-    </LocalizationProvider>
+            </div>
+          </div>
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }

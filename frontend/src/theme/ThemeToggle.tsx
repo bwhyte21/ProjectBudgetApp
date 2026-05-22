@@ -1,30 +1,34 @@
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { setMode, type ThemeMode } from './themeSlice';
+import { Sun, Moon, MonitorCog } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { setMode, type ThemeMode } from "./themeSlice";
 
 export function ThemeToggle() {
-  const mode = useAppSelector(s => s.theme.mode);
+  const mode = useAppSelector((s) => s.theme.mode);
   const dispatch = useAppDispatch();
 
-  const handle = (_: unknown, next: ThemeMode | null) => {
-    if (next) dispatch(setMode(next));
+  const handle = (next: string) => {
+    if (next) dispatch(setMode(next as ThemeMode));
   };
 
   return (
-    <ToggleButtonGroup value={mode} exclusive onChange={handle} size="small" color="primary">
-      <ToggleButton value="light" aria-label="Light mode">
-        <LightModeIcon fontSize="small" />
-      </ToggleButton>
-      <ToggleButton value="system" aria-label="System mode">
-        <SettingsBrightnessIcon fontSize="small" />
-      </ToggleButton>
-      <ToggleButton value="dark" aria-label="Dark mode">
-        <DarkModeIcon fontSize="small" />
-      </ToggleButton>
-    </ToggleButtonGroup>
+    <ToggleGroup
+      type="single"
+      value={mode}
+      onValueChange={handle}
+      variant="outline"
+      size="sm"
+      className="bg-card"
+    >
+      <ToggleGroupItem value="light" aria-label="Light mode">
+        <Sun className="size-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="system" aria-label="System mode">
+        <MonitorCog className="size-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="dark" aria-label="Dark mode">
+        <Moon className="size-4" />
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

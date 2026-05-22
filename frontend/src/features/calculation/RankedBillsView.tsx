@@ -1,31 +1,35 @@
-import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
-import Chip from "@mui/material/Chip";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
-import FormControl from "@mui/material/FormControl";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import InputAdornment from "@mui/material/InputAdornment";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import MenuItem from "@mui/material/MenuItem";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import Select from "@mui/material/Select";
-import Stack from "@mui/material/Stack";
-import Switch from "@mui/material/Switch";
-import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import { useEffect, useState, Fragment } from "react";
+import { CircleCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { billInWindow, getPayPeriodWindows } from "./payPeriodUtils";
 import { fetchCalculation } from "./calculationSlice";
@@ -33,7 +37,6 @@ import { markBillPaid } from "../bills/billsSlice";
 import { CATEGORY_LABELS } from "../../api/categoryLabels";
 import { getCategoryChipColor } from "../bills/categoryChip";
 import { getRankReasonChipColor } from "./rankReasonChip";
-import type { SxProps, Theme } from "@mui/material/styles";
 import type { PayFrequency, RankedBill } from "../../api/types";
 
 const formatCurrency = (n: number) =>
@@ -46,7 +49,7 @@ const formatDueDate = (iso: string) =>
 
 interface BillSectionProps {
   title: string;
-  titleSx?: SxProps<Theme>;
+  titleClassName?: string;
   bills: RankedBill[];
   rankMap: Map<string, number>;
   hidePaid: boolean;
@@ -59,7 +62,7 @@ interface BillSectionProps {
 
 function BillSection({
   title,
-  titleSx,
+  titleClassName,
   bills,
   rankMap,
   hidePaid,
@@ -77,128 +80,109 @@ function BillSection({
   const hasMore = hiddenCount > 0;
 
   return (
-    <Stack spacing={0.5}>
-      <Typography variant="overline" sx={{ lineHeight: 2, ...titleSx }}>
+    <div className="flex flex-col gap-1">
+      <p
+        className={cn(
+          "text-xs font-medium uppercase tracking-wider text-muted-foreground",
+          titleClassName,
+        )}
+      >
         {title}
-      </Typography>
+      </p>
       {visibleBills.length === 0 ? (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ pl: 1, pb: 1 }}
-        >
+        <p className="px-1 pb-1 text-sm text-muted-foreground">
           {hidePaid && bills.length > 0
             ? "Paid bills have been hidden."
             : "No bills due this period."}
-        </Typography>
+        </p>
       ) : (
-        <List dense disablePadding>
+        <ul className="flex flex-col">
           {shown.map((b) => {
             const rank = rankMap.get(b.id) ?? 0;
+            const reasonColor = getRankReasonChipColor(b.rankReason);
             return (
-              <ListItem key={b.id} divider disableGutters sx={{ px: 2, py: 1 }}>
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  sx={{
-                    width: "100%",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    rowGap: 1,
-                  }}
-                >
-                  <Box sx={{ flex: "1 1 220px", minWidth: 0 }}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{ alignItems: "center", flexWrap: "wrap" }}
+              <li
+                key={b.id}
+                className="flex flex-wrap items-center gap-y-2 gap-x-4 border-b px-2 py-2 last:border-b-0"
+              >
+                <div className="min-w-0 flex-[1_1_220px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{b.name}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(getCategoryChipColor(b.category))}
                     >
-                      <Typography variant="subtitle1">{b.name}</Typography>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={CATEGORY_LABELS[b.category] ?? "Unknown"}
-                        color={getCategoryChipColor(b.category)}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        {formatCurrency(b.monthlyAmountOwed)} due{" "}
-                        {formatDueDate(b.nextDueDate)}
-                      </Typography>
-                      {!hidePaid && b.isPaidCurrentCycle && (
-                        <Chip
-                          label="Paid this cycle"
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ height: 18, fontSize: "0.65rem" }}
-                        />
-                      )}
-                    </Stack>
-                    {b.isDueToday ? (
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label="Due today"
-                        color="warning"
-                        sx={{ mt: 0.5 }}
-                      />
-                    ) : (
-                      getRankReasonChipColor(b.rankReason) && (
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          label={b.rankReason}
-                          color={getRankReasonChipColor(b.rankReason)!}
-                          sx={{ mt: 0.5 }}
-                        />
-                      )
-                    )}
-                  </Box>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: "center",
-                      flex: "0 0 auto",
-                      ml: "auto",
-                    }}
-                  >
-                    {showMarkPaid && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="success"
-                        startIcon={
-                          <CheckCircleOutlineOutlinedIcon fontSize="small" />
-                        }
-                        aria-label={`Mark ${b.name} paid`}
-                        onClick={() => onMarkPaid(b)}
+                      {CATEGORY_LABELS[b.category] ?? "Unknown"}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {formatCurrency(b.monthlyAmountOwed)} due{" "}
+                      {formatDueDate(b.nextDueDate)}
+                    </span>
+                    {!hidePaid && b.isPaidCurrentCycle && (
+                      <Badge
+                        variant="outline"
+                        className="border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300"
                       >
-                        {b.isOverdue || b.isDueToday
-                          ? "Mark as Paid"
-                          : "Mark as Paid Early"}
-                      </Button>
+                        Paid this cycle
+                      </Badge>
                     )}
-                    <Tooltip title={`Score: ${b.score.toFixed(2)}`}>
-                      <Chip label={`#${rank}`} size="small" color="primary" />
-                    </Tooltip>
-                  </Stack>
-                </Stack>
-              </ListItem>
+                  </div>
+                  {b.isDueToday ? (
+                    <Badge
+                      variant="outline"
+                      className="mt-1 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                    >
+                      Due today
+                    </Badge>
+                  ) : (
+                    reasonColor && (
+                      <Badge
+                        variant="outline"
+                        className={cn("mt-1", reasonColor)}
+                      >
+                        {b.rankReason}
+                      </Badge>
+                    )
+                  )}
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  {showMarkPaid && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-500/40 text-green-700 hover:bg-green-500/10 dark:text-green-300"
+                      aria-label={`Mark ${b.name} paid`}
+                      onClick={() => onMarkPaid(b)}
+                    >
+                      <CircleCheck className="size-4" />
+                      {b.isOverdue || b.isDueToday
+                        ? "Mark as Paid"
+                        : "Mark as Paid Early"}
+                    </Button>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className="cursor-default">#{rank}</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Score: {b.score.toFixed(2)}</TooltipContent>
+                  </Tooltip>
+                </div>
+              </li>
             );
           })}
-        </List>
+        </ul>
       )}
       {hasMore && (
         <Button
-          size="small"
+          size="sm"
+          variant="link"
+          className="mt-0.5 h-auto self-start p-0"
           onClick={onToggleExpanded}
-          sx={{ alignSelf: "flex-start", mt: 0.5 }}
         >
           {isExpanded ? "Show less" : `Show ${hiddenCount} more`}
         </Button>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -236,74 +220,84 @@ function MarkPaidBalanceDialog({
   };
 
   return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Mark {bill.name} as paid</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Mark {bill.name} as paid</DialogTitle>
+          <DialogDescription className="sr-only">
+            Choose how much you paid toward this bill's balance.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
             Current balance: {formatCurrency(bill.totalBalance ?? 0)}
-          </Typography>
-          <FormControl>
-            <RadioGroup
-              value={choice}
-              onChange={(e) => setChoice(e.target.value as MarkPaidChoice)}
-            >
-              <FormControlLabel
-                value="monthly"
-                control={<Radio />}
-                label={`Monthly (${formatCurrency(bill.monthlyAmountOwed)})`}
-              />
-              {hasMinimum && (
-                <FormControlLabel
-                  value="minimum"
-                  control={<Radio />}
-                  label={`Minimum (${formatCurrency(bill.minimumPayment as number)})`}
-                />
-              )}
-              <FormControlLabel
-                value="other"
-                control={<Radio />}
-                label="Other"
-              />
-            </RadioGroup>
-          </FormControl>
+          </p>
+          <RadioGroup
+            value={choice}
+            onValueChange={(v) => setChoice(v as MarkPaidChoice)}
+            className="gap-3"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="monthly" id="choice-monthly" />
+              <Label htmlFor="choice-monthly" className="font-normal">
+                Monthly ({formatCurrency(bill.monthlyAmountOwed)})
+              </Label>
+            </div>
+            {hasMinimum && (
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="minimum" id="choice-minimum" />
+                <Label htmlFor="choice-minimum" className="font-normal">
+                  Minimum ({formatCurrency(bill.minimumPayment as number)})
+                </Label>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="other" id="choice-other" />
+              <Label htmlFor="choice-other" className="font-normal">
+                Other
+              </Label>
+            </div>
+          </RadioGroup>
           {choice === "other" && (
-            <TextField
-              autoFocus
-              size="small"
-              type="number"
-              label="Amount paid"
-              value={otherAmount}
-              onChange={(e) => setOtherAmount(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">$</InputAdornment>
-                  ),
-                },
-                htmlInput: { min: 0, step: "0.01" },
-              }}
-              error={otherAmount !== "" && !otherValid}
-              helperText={
-                otherAmount !== "" && !otherValid
-                  ? "Enter a non-negative number"
-                  : " "
-              }
-            />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="other-amount">Amount paid</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  id="other-amount"
+                  autoFocus
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="pl-6"
+                  value={otherAmount}
+                  onChange={(e) => setOtherAmount(e.target.value)}
+                  aria-invalid={otherAmount !== "" && !otherValid}
+                />
+              </div>
+              {otherAmount !== "" && !otherValid && (
+                <p className="text-sm text-destructive">
+                  Enter a non-negative number
+                </p>
+              )}
+            </div>
           )}
-        </Stack>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-green-600 text-white hover:bg-green-600/90"
+            onClick={handleConfirm}
+            disabled={confirmDisabled}
+          >
+            Confirm
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          color="success"
-          onClick={handleConfirm}
-          disabled={confirmDisabled}
-        >
-          Confirm
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
@@ -387,63 +381,60 @@ export function RankedBillsView() {
         />
       )}
       <Card>
-        <CardHeader
-          title="Pay these first"
-          action={
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={hidePaid}
-                    onChange={(e) => setHidePaid(e.target.checked)}
-                    size="small"
-                  />
-                }
-                label={<Typography variant="caption">Hide paid</Typography>}
-                sx={{ mr: 0, whiteSpace: "nowrap" }}
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+          <CardTitle>Pay these first</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <Switch
+                id="hide-paid"
+                checked={hidePaid}
+                onCheckedChange={setHidePaid}
               />
-              <Stack
-                direction="row"
-                spacing={0.5}
-                sx={{ alignItems: "center" }}
+              <Label htmlFor="hide-paid" className="text-xs font-normal">
+                Hide paid
+              </Label>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                Per section
+              </span>
+              <Select
+                value={String(sectionLimit)}
+                onValueChange={(v) => setSectionLimit(Number(v))}
               >
-                <Typography variant="caption" sx={{ whiteSpace: "nowrap" }}>
-                  Per section
-                </Typography>
-                <Select
-                  size="small"
-                  value={sectionLimit}
-                  onChange={(e) => setSectionLimit(Number(e.target.value))}
-                  sx={{ minWidth: 72 }}
-                >
+                <SelectTrigger size="sm" className="w-[4.5rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
                   {[10, 25, 50].map((n) => (
-                    <MenuItem key={n} value={n}>
+                    <SelectItem key={n} value={String(n)}>
                       {n}
-                    </MenuItem>
+                    </SelectItem>
                   ))}
-                </Select>
-              </Stack>
-              <Button
-                onClick={() => dispatch(fetchCalculation())}
-                disabled={status === "loading"}
-              >
-                Recalculate
-              </Button>
-            </Stack>
-          }
-        />
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => dispatch(fetchCalculation())}
+              disabled={status === "loading"}
+            >
+              Recalculate
+            </Button>
+          </div>
+        </CardHeader>
         <CardContent>
           {!result || allBills.length === 0 ? (
-            <Typography color="text.secondary">
+            <p className="text-muted-foreground">
               Add some bills and your income to see prioritized recommendations.
-            </Typography>
+            </p>
           ) : (
-            <Stack spacing={2}>
+            <div className="flex flex-col gap-4">
               {overdueBills.length > 0 && (
                 <>
                   <BillSection
                     title="Overdue"
-                    titleSx={{ color: "error.main" }}
+                    titleClassName="text-destructive"
                     bills={overdueBills}
                     rankMap={rankMap}
                     hidePaid={hidePaid}
@@ -452,12 +443,12 @@ export function RankedBillsView() {
                     onToggleExpanded={() => toggleExpanded("Overdue")}
                     onMarkPaid={handleMarkPaid}
                   />
-                  <Divider />
+                  <Separator />
                 </>
               )}
               {windows.map((w, i) => (
                 <Fragment key={w.label}>
-                  {i > 0 && <Divider />}
+                  {i > 0 && <Separator />}
                   <BillSection
                     title={w.label}
                     bills={periodBills[i]}
@@ -472,7 +463,7 @@ export function RankedBillsView() {
               ))}
               {laterBills.length > 0 && (
                 <>
-                  <Divider />
+                  <Separator />
                   <BillSection
                     title="Later"
                     bills={laterBills}
@@ -486,7 +477,7 @@ export function RankedBillsView() {
                   />
                 </>
               )}
-            </Stack>
+            </div>
           )}
         </CardContent>
       </Card>

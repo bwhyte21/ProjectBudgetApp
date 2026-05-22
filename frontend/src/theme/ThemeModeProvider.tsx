@@ -1,26 +1,23 @@
-import { useMemo, type ReactNode } from 'react';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useAppSelector } from '../store/hooks';
-import { darkPalette, lightPalette } from './palettes';
+import { useEffect, type ReactNode } from "react";
+import { useAppSelector } from "../store/hooks";
 
 export function ThemeModeProvider({ children }: { children: ReactNode }) {
-  const mode = useAppSelector(s => s.theme.mode);
-  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const mode = useAppSelector((s) => s.theme.mode);
 
-  const theme = useMemo(() => {
-    const effective = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
-    return createTheme({
-      palette: effective === 'dark' ? darkPalette : lightPalette,
-      shape: { borderRadius: 8 }
-    });
-  }, [mode, prefersDark]);
+  useEffect(() => {
+    const root = document.documentElement;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const effective =
+        mode === "system" ? (mql.matches ? "dark" : "light") : mode;
+      root.classList.toggle("dark", effective === "dark");
+    };
+    apply();
+    if (mode === "system") {
+      mql.addEventListener("change", apply);
+      return () => mql.removeEventListener("change", apply);
+    }
+  }, [mode]);
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-    </ThemeProvider>
-  );
+  return <>{children}</>;
 }

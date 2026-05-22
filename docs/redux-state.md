@@ -43,7 +43,7 @@ The frontend has four kinds of shared state: bills (a list), income (a singleton
 - **State:** `{ mode: 'light' | 'dark' | 'system' }`
 - **Reducer:** `setMode`
 - **Triggered by:** `ThemeToggle` clicks.
-- **Persistence:** the reducer writes the new mode to `localStorage['whichtopay.themeMode']`. The slice's `loadInitialMode()` reads it on app boot, so the user's choice survives reloads. The "System" option always defers to `prefers-color-scheme` at render time via `useMediaQuery`.
+- **Persistence:** the reducer writes the new mode to `localStorage['whichtopay.themeMode']`. The slice's `loadInitialMode()` reads it on app boot, so the user's choice survives reloads. The "System" option always defers to the OS `prefers-color-scheme` preference: `ThemeModeProvider` resolves the effective theme and toggles the `.dark` class on the document root, listening to a `matchMedia('(prefers-color-scheme: dark)')` change event while in system mode.
 - **Implementation:** [frontend/src/theme/themeSlice.ts](../frontend/src/theme/themeSlice.ts)
 
 ## Data Flow Diagram
@@ -100,7 +100,7 @@ This pattern matches Redux Toolkit's conventions and keeps the reducer code unif
 ## What Is Deliberately NOT in Redux
 
 - **Form draft state.** `react-hook-form` owns it. Putting drafts in Redux would cause a re-render on every keystroke and add boilerplate for no benefit.
-- **MUI dialog open/close.** Local component state via `useState`. It is ephemeral, scoped to one component, and never read elsewhere.
+- **Dialog open/close.** Local component state via `useState`. It is ephemeral, scoped to one component, and never read elsewhere.
 - **Routing.** No router yet - the app is a single page. If we ever add routing, prefer `react-router` over storing the URL in Redux.
 
 Keeping ephemeral UI state out of the store reduces boilerplate, prevents accidental coupling, and minimizes re-renders.

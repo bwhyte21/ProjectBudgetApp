@@ -1,31 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogActions from "@mui/material/DialogActions";
-import Table from "@mui/material/Table";
-import TableHead from "@mui/material/TableHead";
-import TableBody from "@mui/material/TableBody";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TablePagination from "@mui/material/TablePagination";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import CommentIcon from "@mui/icons-material/Comment";
-import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
-import AddIcon from "@mui/icons-material/Add";
+import {
+  Pencil,
+  Trash2,
+  MessageSquare,
+  Plus,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   createColumnHelper,
   flexRender,
@@ -41,6 +50,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { createBill, deleteBill, fetchBills, updateBill } from "./billsSlice";
 import { fetchCalculation } from "../calculation/calculationSlice";
+import { BillDeleteDialog } from "./BillDeleteDialog";
 import { BillFormDialog } from "./BillFormDialog";
 import { BillNoteDialog } from "./BillNoteDialog";
 import { format, parseISO } from "date-fns";
@@ -68,7 +78,15 @@ const formatDueDate = (iso: string) =>
 const formatLastPaidAt = (iso: string) =>
   format(parseISO(iso), "MMM d, yyyy h:mm a");
 
+const alignClass = (align: "left" | "right" | "center" | undefined) =>
+  align === "right"
+    ? "text-right"
+    : align === "center"
+      ? "text-center"
+      : "text-left";
+
 export function BillsListPage() {
+  "use no memo";
   const dispatch = useAppDispatch();
   const { items, status } = useAppSelector((s) => s.bills);
   const { result: calcResult, status: calcStatus } = useAppSelector(
@@ -150,12 +168,9 @@ export function BillsListPage() {
         cell: (info) => {
           const c = info.getValue();
           return (
-            <Chip
-              size="small"
-              variant="outlined"
-              label={CATEGORY_LABELS[c] ?? "Unknown"}
-              color={getCategoryChipColor(c)}
-            />
+            <Badge variant="outline" className={cn(getCategoryChipColor(c))}>
+              {CATEGORY_LABELS[c] ?? "Unknown"}
+            </Badge>
           );
         },
       }),
@@ -178,7 +193,10 @@ export function BillsListPage() {
         cell: (info) => {
           const v = info.getValue();
           if (v) return formatDueDate(v);
-          if (calcStatus === "loading") return <CircularProgress size={14} />;
+          if (calcStatus === "loading")
+            return (
+              <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />
+            );
           return "-";
         },
         meta: { align: "right" },
@@ -197,44 +215,52 @@ export function BillsListPage() {
         enableSorting: false,
         meta: { align: "right" },
         cell: ({ row }) => (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{ justifyContent: "flex-end" }}
-          >
-            <IconButton
-              size="small"
+          <div className="flex justify-end gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
               onClick={() => openEdit(row.original)}
               aria-label="Edit"
             >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <Tooltip
-              title={row.original.note ?? ""}
-              disableHoverListener={!row.original.note}
-              disableFocusListener={!row.original.note}
-              disableTouchListener={!row.original.note}
-            >
-              <IconButton
-                size="small"
+              <Pencil className="size-4" />
+            </Button>
+            {row.original.note ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => setNoteBill(row.original)}
+                    aria-label="Note"
+                  >
+                    <MessageSquare className="size-4 fill-current" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{row.original.note}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
                 onClick={() => setNoteBill(row.original)}
                 aria-label="Note"
               >
-                {row.original.note ? (
-                  <CommentIcon fontSize="small" />
-                ) : (
-                  <CommentOutlinedIcon fontSize="small" />
-                )}
-              </IconButton>
-            </Tooltip>
-            <IconButton
-              size="small"
+                <MessageSquare className="size-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
               onClick={() => setBillPendingDelete(row.original)}
               aria-label="Delete"
             >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Stack>
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
         ),
       }),
     ] as ColumnDef<BillRow, unknown>[];
@@ -251,32 +277,32 @@ export function BillsListPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const pageCount = table.getPageCount();
+
   return (
     <Card>
-      <CardHeader
-        title="Bills"
-        action={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openAdd}>
-            Add bill
-          </Button>
-        }
-      />
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardTitle>Bills</CardTitle>
+        <Button onClick={openAdd}>
+          <Plus className="size-4" />
+          Add bill
+        </Button>
+      </CardHeader>
       <CardContent>
-        {status === "loading" && <Typography>Loading...</Typography>}
+        {status === "loading" && <p>Loading...</p>}
         {items.length === 0 && status !== "loading" && (
-          <Typography color="text.secondary">
+          <p className="text-muted-foreground">
             No bills yet. Add your first one.
-          </Typography>
+          </p>
         )}
         {items.length > 0 && (
           <>
-            <Table size="small">
-              <TableHead>
+            <Table>
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
-                      const align =
-                        header.column.columnDef.meta?.align ?? "left";
+                      const align = header.column.columnDef.meta?.align;
                       const canSort = header.column.getCanSort();
                       const sorted = header.column.getIsSorted();
                       const headerContent = flexRender(
@@ -284,35 +310,51 @@ export function BillsListPage() {
                         header.getContext(),
                       );
                       return (
-                        <TableCell
+                        <TableHead
                           key={header.id}
-                          align={align}
-                          sortDirection={sorted === false ? false : sorted}
+                          className={alignClass(align)}
+                          aria-sort={
+                            sorted === "asc"
+                              ? "ascending"
+                              : sorted === "desc"
+                                ? "descending"
+                                : undefined
+                          }
                         >
                           {canSort ? (
-                            <TableSortLabel
-                              active={sorted !== false}
-                              direction={sorted === false ? "asc" : sorted}
+                            <button
+                              type="button"
                               onClick={header.column.getToggleSortingHandler()}
+                              className={cn(
+                                "inline-flex items-center gap-1 select-none hover:text-foreground",
+                                align === "right" && "flex-row-reverse",
+                              )}
                             >
                               {headerContent}
-                            </TableSortLabel>
+                              {sorted === "asc" ? (
+                                <ChevronUp className="size-3.5" />
+                              ) : sorted === "desc" ? (
+                                <ChevronDown className="size-3.5" />
+                              ) : (
+                                <ChevronsUpDown className="size-3.5 opacity-50" />
+                              )}
+                            </button>
                           ) : (
                             headerContent
                           )}
-                        </TableCell>
+                        </TableHead>
                       );
                     })}
                   </TableRow>
                 ))}
-              </TableHead>
+              </TableHeader>
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => {
-                      const align = cell.column.columnDef.meta?.align ?? "left";
+                      const align = cell.column.columnDef.meta?.align;
                       return (
-                        <TableCell key={cell.id} align={align}>
+                        <TableCell key={cell.id} className={alignClass(align)}>
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext(),
@@ -324,17 +366,51 @@ export function BillsListPage() {
                 ))}
               </TableBody>
             </Table>
-            <TablePagination
-              component="div"
-              count={table.getRowCount()}
-              page={pagination.pageIndex}
-              onPageChange={(_, page) => table.setPageIndex(page)}
-              rowsPerPage={pagination.pageSize}
-              onRowsPerPageChange={(e) =>
-                table.setPageSize(Number(e.target.value))
-              }
-              rowsPerPageOptions={[10, 25, 50]}
-            />
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Rows per page</span>
+                <Select
+                  value={String(pagination.pageSize)}
+                  onValueChange={(v) => table.setPageSize(Number(v))}
+                >
+                  <SelectTrigger size="sm" className="w-[4.5rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <span className="text-muted-foreground">
+                Page {pagination.pageIndex + 1} of {Math.max(pageCount, 1)}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
           </>
         )}
       </CardContent>
@@ -351,32 +427,11 @@ export function BillsListPage() {
         onClose={() => setNoteBill(null)}
         onSubmit={handleNoteSubmit}
       />
-      <Dialog
-        open={billPendingDelete !== null}
+      <BillDeleteDialog
+        bill={billPendingDelete}
         onClose={() => setBillPendingDelete(null)}
-        maxWidth="xs"
-        fullWidth
-        aria-labelledby="delete-bill-dialog-title"
-      >
-        <DialogTitle id="delete-bill-dialog-title">Delete bill?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete{" "}
-            <strong>{billPendingDelete?.name}</strong>? This action cannot be
-            undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBillPendingDelete(null)}>Cancel</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={handleConfirmDelete}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleConfirmDelete}
+      />
     </Card>
   );
 }

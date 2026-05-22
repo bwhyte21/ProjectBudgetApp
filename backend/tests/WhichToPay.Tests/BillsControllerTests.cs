@@ -162,4 +162,78 @@ public class BillsControllerTests
         read.LastPaidPeriod.Should().Be(dto.PaidPeriod);
         read.LastPaidAt.Should().NotBeNull();
     }
+
+    private static BillCreateDto NewCreateDto(string? note) => new()
+    {
+        Name = "Garmin Intl",
+        MonthlyAmountOwed = 87.80m,
+        DueDate = new DateOnly(2026, 5, 25),
+        Category = BillCategory.Loan,
+        Note = note
+    };
+
+    private static BillUpdateDto NewUpdateDto(string? note) => new()
+    {
+        Name = "Garmin Intl",
+        MonthlyAmountOwed = 87.80m,
+        DueDate = new DateOnly(2026, 5, 25),
+        Category = BillCategory.Loan,
+        Note = note
+    };
+
+    [Fact]
+    public void Create_PersistsNote()
+    {
+        var controller = new BillsController(new FakeBillRepository());
+
+        var result = controller.Create(NewCreateDto("pay early"));
+
+        var created = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var read = created.Value.Should().BeOfType<BillReadDto>().Subject;
+        read.Note.Should().Be("pay early");
+    }
+
+    [Fact]
+    public void Update_PersistsNote()
+    {
+        var (controller, _, bill) = Setup(totalBalance: null);
+
+        var result = controller.Update(bill.Id, NewUpdateDto("call to negotiate"));
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var read = ok.Value.Should().BeOfType<BillReadDto>().Subject;
+        read.Note.Should().Be("call to negotiate");
+    }
+
+    [Fact]
+    public void Update_WhitespaceNote_NormalizesToNull()
+    {
+        var (controller, _, bill) = Setup(totalBalance: null);
+
+        var result = controller.Update(bill.Id, NewUpdateDto("   "));
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var read = ok.Value.Should().BeOfType<BillReadDto>().Subject;
+        read.Note.Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_NoteWithScriptTag_ReturnsBadRequest()
+    {
+        var (controller, _, bill) = Setup(totalBalance: null);
+
+        var result = controller.Update(bill.Id, NewUpdateDto("<script>x"));
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public void Create_NoteWithScriptTag_ReturnsBadRequest()
+    {
+        var controller = new BillsController(new FakeBillRepository());
+
+        var result = controller.Create(NewCreateDto("<script>x"));
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

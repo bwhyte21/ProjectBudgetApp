@@ -19,9 +19,12 @@ import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CommentIcon from "@mui/icons-material/Comment";
+import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import {
   createColumnHelper,
@@ -39,6 +42,7 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { createBill, deleteBill, fetchBills, updateBill } from "./billsSlice";
 import { fetchCalculation } from "../calculation/calculationSlice";
 import { BillFormDialog } from "./BillFormDialog";
+import { BillNoteDialog } from "./BillNoteDialog";
 import { format, parseISO } from "date-fns";
 import type { Bill, BillInput } from "../../api/types";
 import { CATEGORY_LABELS } from "../../api/categoryLabels";
@@ -73,6 +77,7 @@ export function BillsListPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [billPendingDelete, setBillPendingDelete] = useState<Bill | null>(null);
+  const [noteBill, setNoteBill] = useState<Bill | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -122,6 +127,11 @@ export function BillsListPage() {
     },
     [dispatch],
   );
+  const handleNoteSubmit = async (input: BillInput) => {
+    if (!noteBill) return;
+    await dispatch(updateBill({ id: noteBill.id, input })).unwrap();
+    dispatch(fetchCalculation());
+  };
   const handleConfirmDelete = useCallback(async () => {
     if (!billPendingDelete) return;
     await handleDelete(billPendingDelete.id);
@@ -162,21 +172,11 @@ export function BillsListPage() {
         },
         meta: { align: "right" },
       }),
-      ch.accessor("dueDate", {
+      ch.accessor((r) => r.nextDueDate ?? r.dueDate, {
+        id: "nextDueDate",
         header: "Due date",
-        cell: (info) => formatDueDate(info.getValue()),
-        meta: { align: "right" },
-      }),
-      ch.accessor("nextDueDate", {
-        header: "Next due",
         cell: (info) => {
           const v = info.getValue();
-          const hasEverBeenPaid = Boolean(info.row.original.lastPaidAt);
-          if (!hasEverBeenPaid) {
-            if (calcStatus === "loading" && !v)
-              return <CircularProgress size={14} />;
-            return "-";
-          }
           if (v) return formatDueDate(v);
           if (calcStatus === "loading") return <CircularProgress size={14} />;
           return "-";
@@ -209,6 +209,24 @@ export function BillsListPage() {
             >
               <EditIcon fontSize="small" />
             </IconButton>
+            <Tooltip
+              title={row.original.note ?? ""}
+              disableHoverListener={!row.original.note}
+              disableFocusListener={!row.original.note}
+              disableTouchListener={!row.original.note}
+            >
+              <IconButton
+                size="small"
+                onClick={() => setNoteBill(row.original)}
+                aria-label="Note"
+              >
+                {row.original.note ? (
+                  <CommentIcon fontSize="small" />
+                ) : (
+                  <CommentOutlinedIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
             <IconButton
               size="small"
               onClick={() => setBillPendingDelete(row.original)}
@@ -325,6 +343,13 @@ export function BillsListPage() {
         initial={editing}
         onClose={() => setDialogOpen(false)}
         onSubmit={handleSubmit}
+      />
+      <BillNoteDialog
+        key={noteBill?.id}
+        open={noteBill !== null}
+        bill={noteBill}
+        onClose={() => setNoteBill(null)}
+        onSubmit={handleNoteSubmit}
       />
       <Dialog
         open={billPendingDelete !== null}

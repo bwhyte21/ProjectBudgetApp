@@ -226,4 +226,14 @@ public class BillsControllerTests
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
+
+    [Fact]
+    public void Create_NoteWithScriptTag_ReturnsBadRequest()
+    {
+        var controller = new BillsController(new FakeBillRepository());
+
+        var result = controller.Create(NewCreateDto("<script>x"));
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

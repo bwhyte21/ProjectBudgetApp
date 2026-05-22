@@ -172,13 +172,14 @@ export function BillsListPage() {
         },
         meta: { align: "right" },
       }),
-      ch.accessor("nextDueDate", {
+      ch.accessor((r) => r.nextDueDate ?? r.dueDate, {
+        id: "nextDueDate",
         header: "Due date",
         cell: (info) => {
           const v = info.getValue();
           if (v) return formatDueDate(v);
           if (calcStatus === "loading") return <CircularProgress size={14} />;
-          return formatDueDate(info.row.original.dueDate);
+          return "-";
         },
         meta: { align: "right" },
       }),
@@ -211,6 +212,8 @@ export function BillsListPage() {
             <Tooltip
               title={row.original.note ?? ""}
               disableHoverListener={!row.original.note}
+              disableFocusListener={!row.original.note}
+              disableTouchListener={!row.original.note}
             >
               <IconButton
                 size="small"
